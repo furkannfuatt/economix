@@ -228,6 +228,8 @@ struct ExtendedCategorizerTests {
         ("CINAR ECZANESI", "saglik"),
         ("GUNES MOBILYA", "ev"),
         ("ILHAN FIRINI", "yemek"),
+        ("abc_kadikoy_yemek", "yemek"),
+        ("AYSE TEYZE EV YEMEKLERI", "yemek"),
     ])
     func genericStems(text: String, key: String) {
         #expect(MerchantCategorizer.suggestedSeedKey(for: text) == key)

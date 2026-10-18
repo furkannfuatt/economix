@@ -39,7 +39,7 @@ public enum MerchantCategorizer {
     /// Genel kelime kökleri: bir kelimenin başında geçerse yeter ("PASTANESI", "OTOPARKI", "ECZANESI").
     static let stems: [String: [String]] = [
         "market": ["MARKET", "KASAP", "MANAV", "BAKKAL", "SARKUTERI", "GIDA", "KURUYEMIS"],
-        "yemek": ["PASTANE", "FIRIN", "RESTORAN", "RESTAURANT", "LOKANTA", "KEBAP", "DONER", "PIDE", "KOFTE", "CAFE",
+        "yemek": ["YEMEK", "PASTANE", "FIRIN", "RESTORAN", "RESTAURANT", "LOKANTA", "KEBAP", "DONER", "PIDE", "KOFTE", "CAFE",
                   "KAFE", "KAHVE", "BURGER", "PIZZA", "BORACI", "SIMIT"],
         "ulasim": ["BENZIN", "PETROL", "AKARYAKIT", "OTOPARK", "TAKSI", "OTOGAR"],
         "saglik": ["ECZA", "HASTANE", "KLINIK", "OPTIK", "LABORATUVAR"],

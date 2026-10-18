@@ -47,7 +47,8 @@ screens: generate
 	xcrun simctl uninstall "$(SIM)" com.furkanfuat.ecoomix 2>/dev/null || true
 	TEST_RUNNER_SCREENSHOT_DIR="$(CURDIR)/build/screens" \
 	TEST_RUNNER_IMPORT_FILE="$(CURDIR)/EcoomixUITests/Fixtures/garanti-ornek.csv" \
-	TEST_RUNNER_IMPORT_PDF="$(CURDIR)/EcoomixUITests/Fixtures/garanti-ornek.pdf" xcodebuild -project Ecoomix.xcodeproj -scheme EcoomixScreens \
+	TEST_RUNNER_IMPORT_PDF="$(CURDIR)/EcoomixUITests/Fixtures/garanti-ornek.pdf" \
+	TEST_RUNNER_IMPORT_OCR_PDF="$(CURDIR)/EcoomixUITests/Fixtures/akbank-ornek-goruntu.pdf" xcodebuild -project Ecoomix.xcodeproj -scheme EcoomixScreens \
 		-derivedDataPath build/DerivedData -destination $(DEST) test
 
 screenshot:

@@ -144,6 +144,11 @@ extension Money {
             if parts[1].count == 3 { return (parts[0] + parts[1], "") }
             return (parts[0], parts[1])
         }
+        // "1.234.56": OCR ondalık ayracı binlikle aynı okumuş; son 2 hane kuruştur.
+        if parts.count > 2, parts.last?.count == 2,
+           let integer = validatedThousands(parts.dropLast().joined(separator: String(separator)), separator: separator) {
+            return (integer, parts.last!)
+        }
         guard let integer = validatedThousands(s, separator: separator) else { return nil }
         return (integer, "")
     }

@@ -56,7 +56,11 @@ public enum PDFStatementLines {
     }
 
     private static let numericDate = try! NSRegularExpression(pattern: #"^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$"#)
-    private static let money = try! NSRegularExpression(pattern: #"^-?\(?(\d{1,3}(\.\d{3})+|\d+),\d{2}\)?-?$"#)
+    /// "1.234,56", "1,234.56", "245.50", "299,90-", "5,000.00(-)", "25.00()"
+    private static let money = try! NSRegularExpression(
+        pattern: #"^-?\(?(\d{1,3}([.,]\d{3})+|\d+)[.,]\d{2}\)?(-|\(-\)|\(\+\)|\(\))?$"#)
+    /// Akbank'ın "kalan taksit" kolonu: "990.00x1"
+    private static let remainingInstallments = try! NSRegularExpression(pattern: #"^\d[\d.,]*x\d+$"#)
     private static let installment = try! NSRegularExpression(pattern: #"^(\d{1,2})/(\d{1,2})$"#)
 
     static func row(from line: String, calendar: Calendar) -> [String]? {
@@ -68,11 +72,17 @@ public enum PDFStatementLines {
 
         // Sondan: para birimi işaretleri ve tutarlar (bonus/puan kolonu varsa son tutar asıl tutardır).
         var amounts: [String] = []
+        var pendingCredit = false
         while let last = tokens.last {
             if ["TL", "₺", "TRY"].contains(last.uppercased()) {
                 tokens.removeLast()
+            } else if amounts.isEmpty, matches(remainingInstallments, last) {
+                tokens.removeLast()
+            } else if amounts.isEmpty, ["(-)", "()"].contains(last) {
+                pendingCredit = true
+                tokens.removeLast()
             } else if matches(money, last) {
-                amounts.insert(last, at: 0)
+                amounts.insert(normalizedAmount(last, credit: pendingCredit && amounts.isEmpty), at: 0)
                 tokens.removeLast()
             } else if (last == "-" || last == "+"), !amounts.isEmpty {
                 if last == "-" { amounts[0] = "-" + amounts[0] }
@@ -91,6 +101,18 @@ public enum PDFStatementLines {
         let description = tokens.joined(separator: " ")
         guard !description.isEmpty else { return nil }
         return [first.normalized, description, installmentText, amount]
+    }
+
+    /// "5,000.00(-)" / "25.00()" → "-5,000.00" / "-25.00"; "(+)" atılır.
+    private static func normalizedAmount(_ token: String, credit: Bool) -> String {
+        var text = token
+        var negative = credit
+        for suffix in ["(-)", "()"] where text.hasSuffix(suffix) {
+            text.removeLast(suffix.count)
+            negative = true
+        }
+        if text.hasSuffix("(+)") { text.removeLast(3) }
+        return negative && !text.hasPrefix("-") ? "-" + text : text
     }
 
     private static func leadingDate(_ tokens: [String], calendar: Calendar) -> (normalized: String, consumed: Int)? {

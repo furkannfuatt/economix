@@ -103,3 +103,103 @@ struct PDFStatementTests {
         ])
     }
 }
+
+@Suite("Akbank Axess PDF düzeni")
+struct AkbankLayoutTests {
+    let lines = [
+        "Hesap Kesim Tarihi 18/09/2026",
+        "İşlem Tarihi Dönem içi işlemler Borç Tutarı (TL) Kalan Borç / Taksit Chip-para",
+        "Önceki Dönem Hesap Özeti Bakiyesi 1,500.00",
+        "02/09/2026 AKBANK Internet Subesi Odeme Tesekkurler 5,000.00(-)",
+        "03/09/2026 abc_kadikoy_yemek 245.50",
+        "05/09/2026 TEKNOSA/teknosa.com.tr (2,970.00 TL) 3/2.taksit 990.00 990.00x1",
+        "06/09/2026 APPLE STORE/ISTANBUL (12,000.00 TL) 12/1.taksit 1,000.00 11000.00x11",
+        "10/09/2026 MIGROS -Kullanilan chip-para 25.00()",
+        "12/09/2026 MIGROS/ISTANBUL 1,234.56",
+        "Genel Toplam 3,000.00 12,345.67 0.00",
+    ]
+
+    @Test("Satırlar kolonlara ayrılır: İngiliz usulü tutar, (-) alacak, kalan taksit kolonu atılır")
+    func rows() {
+        let rows = Array(PDFStatementLines.rows(from: lines).dropFirst())
+        #expect(rows == [
+            ["02.09.2026", "AKBANK Internet Subesi Odeme Tesekkurler", "", "-5,000.00"],
+            ["03.09.2026", "abc_kadikoy_yemek", "", "245.50"],
+            ["05.09.2026", "TEKNOSA/teknosa.com.tr (2,970.00 TL) 3/2.taksit", "", "990.00"],
+            ["06.09.2026", "APPLE STORE/ISTANBUL (12,000.00 TL) 12/1.taksit", "", "1,000.00"],
+            ["10.09.2026", "MIGROS -Kullanilan chip-para", "", "-25.00"],
+            ["12.09.2026", "MIGROS/ISTANBUL", "", "1,234.56"],
+        ])
+    }
+
+    @Test("Uçtan uca: ödeme, iade, harcama ve toplam/kaçıncı sıralı taksitler")
+    func endToEnd() throws {
+        let result = try StatementParser.parse(rows: PDFStatementLines.rows(from: lines), profile: .akbank,
+                                               columns: (headerIndex: 0, map: PDFStatementLines.columns))
+        #expect(result.rows.map(\.kind) == [.payment, .expense, .expense, .expense, .refund, .expense])
+        #expect(result.rows[0].amount == tl(5_000))
+        #expect(result.rows[2].installment == InstallmentMarker(current: 2, total: 3))
+        #expect(result.rows[2].amount == Money(minor: 99_000))
+        #expect(result.rows[3].installment == InstallmentMarker(current: 1, total: 12))
+        #expect(result.rows[5].amount == Money(minor: 123_456))
+    }
+
+    @Test("Taksit yazımları", arguments: [
+        ("TEKNOSA (2,970.00 TL) 3/2.taksit", InstallmentMarker(current: 2, total: 3)),
+        ("APPLE (12,000.00 TL) 12/1.taksit", InstallmentMarker(current: 1, total: 12)),
+        ("X 3/3.taksit", InstallmentMarker(current: 3, total: 3)),
+        ("MEDIAMARKT 4/9 TK", InstallmentMarker(current: 4, total: 9)),
+    ])
+    func installmentStyles(text: String, expected: InstallmentMarker) {
+        #expect(StatementParser.installmentMarker(in: text) == expected)
+    }
+
+    @Test("OCR'ın bozduğu ayraçlar düzeltilir", arguments: [("1.234.56", 123_456), ("1,234,56", 123_456), ("12.345.678,90", 1_234_567_890)])
+    func ocrSeparators(text: String, minor: Int) {
+        #expect(Money.parse(text) == Money(minor: minor))
+    }
+}
+
+/// Metni resim olarak içeren PDF: içinden metin çıkarılamaz, yalnızca görüntüden okunabilir.
+private func makeImageOnlyPDF(_ lines: [String]) -> Data {
+    let scale: CGFloat = 3, width: CGFloat = 595, height: CGFloat = 300
+    let bitmap = CGContext(data: nil, width: Int(width * scale), height: Int(height * scale), bitsPerComponent: 8,
+                           bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                           bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    bitmap.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+    bitmap.fill(CGRect(x: 0, y: 0, width: width * scale, height: height * scale))
+    bitmap.scaleBy(x: scale, y: scale)
+    let font = CTFontCreateWithName("Helvetica" as CFString, 12, nil)
+    for (index, line) in lines.enumerated() {
+        let attributed = NSAttributedString(string: line, attributes: [.init(kCTFontAttributeName as String): font])
+        bitmap.textPosition = CGPoint(x: 30, y: height - 40 - CGFloat(index) * 24)
+        CTLineDraw(CTLineCreateWithAttributedString(attributed), bitmap)
+    }
+    let image = bitmap.makeImage()!
+
+    let data = NSMutableData()
+    var box = CGRect(x: 0, y: 0, width: width, height: height)
+    let pdf = CGContext(consumer: CGDataConsumer(data: data as CFMutableData)!, mediaBox: &box, nil)!
+    pdf.beginPDFPage(nil)
+    pdf.draw(image, in: box)
+    pdf.endPDFPage()
+    pdf.closePDF()
+    return data as Data
+}
+
+@Suite("PDF OCR")
+struct PDFOCRTests {
+    @Test("Metin katmanı olmayan PDF görüntüden okunur")
+    func readsImageOnlyPDF() throws {
+        let pdf = makeImageOnlyPDF(["Hesap Kesim Tarihi 18/09/2026",
+                                    "12/09/2026 MIGROS ISTANBUL 1,234.56",
+                                    "14/09/2026 SHELL PETROL 850.00"])
+        #expect((try? PDFTextReader.lines(from: pdf)) == nil, "Metin katmanı olmamalı")
+        let lines = try PDFOCRReader.lines(from: pdf)
+        let rows = Array(PDFStatementLines.rows(from: lines).dropFirst())
+        #expect(rows.count == 2)
+        #expect(rows.first?.first == "12.09.2026")
+        #expect(rows.first?.last == "1,234.56")
+        #expect(rows.last?.last == "850.00")
+    }
+}

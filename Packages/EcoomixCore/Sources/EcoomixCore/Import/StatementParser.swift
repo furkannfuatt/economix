@@ -270,8 +270,9 @@ public enum StatementParser {
 
     private static let keywordPattern = try! NSRegularExpression(
         pattern: #"(?:TAKSIT\w*|\bTKS?\b)\D{0,15}?\b(\d{1,2})\s*/\s*(\d{1,2})\b(?!\s*/\s*\d)"#)
+    /// "4/9 TK" ya da Akbank'ın "3/2.taksit" (toplam/kaçıncı) yazımı.
     private static let trailingKeywordPattern = try! NSRegularExpression(
-        pattern: #"\b(\d{1,2})\s*/\s*(\d{1,2})\s*(?:TAKSIT|TKS?)\b"#)
+        pattern: #"\b(\d{1,2})\s*/\s*(\d{1,2})[.\s]*(?:TAKSIT|TKS?)\b"#)
     private static let parenthesizedPattern = try! NSRegularExpression(pattern: #"\((\d{1,2})\s*/\s*(\d{1,2})\)"#)
 
     /// Açıklamadaki "TAKSIT 3/6", "(2/12)", "4/9 TK" gibi işaretler. Tarih benzeri sayılar elenir.
@@ -281,7 +282,9 @@ public enum StatementParser {
         for pattern in [keywordPattern, trailingKeywordPattern, parenthesizedPattern] {
             guard let match = pattern.firstMatch(in: folded, range: range),
                   let first = Range(match.range(at: 1), in: folded), let second = Range(match.range(at: 2), in: folded),
-                  let current = Int(folded[first]), let total = Int(folded[second]) else { continue }
+                  var current = Int(folded[first]), var total = Int(folded[second]) else { continue }
+            // Sonda "taksit" geçen yazımda büyük sayı toplamdır (Akbank: "12/1.taksit" = 12 taksitin 1.'si).
+            if pattern === trailingKeywordPattern, current > total { swap(&current, &total) }
             if let marker = validMarker(current, total) { return marker }
         }
         return nil

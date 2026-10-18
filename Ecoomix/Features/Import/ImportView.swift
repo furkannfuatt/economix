@@ -23,6 +23,8 @@ struct ImportView: View {
     /// PDF okunduğunda paylaşılabilecek gizlenmiş biçim örneği (okuma sorunlarını gidermek için).
     @State private var structureSample: String?
     @State private var copiedSample = false
+    @State private var readingPDF = false
+    @State private var readByOCR = false
     @State private var categorizing = false
     @State private var categoryMessage: String?
     @State private var categoryError: String?
@@ -71,7 +73,13 @@ struct ImportView: View {
                     ForEach(accounts) { Label($0.name, systemImage: $0.icon).tag(Account?.some($0)) }
                 }
                 Button("Dosya seç", systemImage: "doc.badge.plus") { showPicker = true }
-                    .disabled(account == nil)
+                    .disabled(account == nil || readingPDF)
+                if readingPDF {
+                    HStack {
+                        ProgressView()
+                        Text("PDF okunuyor…").foregroundStyle(.secondary)
+                    }
+                }
             } footer: {
                 Text(account?.isCreditCard == false
                      ? "Banka kartı harcamaları vadesiz hesap dökümünde görünür; bankanın hesap hareketleri dökümünü (CSV/.xlsx) seç. Banka hesaplarına ve banka kartlarına elle girdiğin kayıtlar otomatik eşleştirilir."
@@ -136,6 +144,15 @@ struct ImportView: View {
                 Text(result.expensesArePositive
                      ? "Harcamalar pozitif, ödeme ve iadeler negatif olarak algılandı."
                      : "Para çıkışları negatif, girişler pozitif olarak algılandı.")
+            }
+
+            if readByOCR {
+                Section {
+                    Label("Bu PDF'in metni okunamadığı için sayfalar görüntüden okundu (OCR). Tutarları ve tarihleri ekstreyle bir kez karşılaştır.",
+                          systemImage: "text.viewfinder")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
             }
 
             categorySection
@@ -285,6 +302,7 @@ struct ImportView: View {
         error = nil
         structureSample = nil
         copiedSample = false
+        readByOCR = false
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         do {
@@ -292,16 +310,7 @@ struct ImportView: View {
             let rows: [[String]]
             switch url.pathExtension.lowercased() {
             case "pdf":
-                let lines: [String]
-                do {
-                    lines = try PDFTextReader.lines(from: data)
-                } catch PDFTextReader.ReadError.noText {
-                    error = "Bu PDF'te okunabilir metin yok (taranmış görüntü olabilir). Bankanın uygulamasından ekstreyi PDF yerine Excel olarak almayı dene."
-                    return
-                }
-                structureSample = StatementStructure.masked(lines: lines).joined(separator: "\n")
-                parse(rows: PDFStatementLines.rows(from: lines), fileName: url.lastPathComponent,
-                      columns: (0, PDFStatementLines.columns))
+                loadPDF(data, fileName: url.lastPathComponent)
                 return
             case "xlsx":
                 rows = try XLSXReader.rows(from: data)
@@ -314,6 +323,33 @@ struct ImportView: View {
             parse(rows: rows, fileName: url.lastPathComponent, columns: nil)
         } catch {
             self.error = "Dosya okunamadı: \(error.localizedDescription)"
+        }
+    }
+
+    /// Önce PDF'in metin katmanı denenir; işlem satırı çıkmazsa (taranmış ya da eşleme tablosuz yazı tipi)
+    /// sayfalar cihazda görüntüden okunur (OCR).
+    private func loadPDF(_ data: Data, fileName: String) {
+        readingPDF = true
+        Task {
+            let outcome = await Task.detached(priority: .userInitiated) { () -> Result<(lines: [String], ocr: Bool), any Error> in
+                let textLines = (try? PDFTextReader.lines(from: data)) ?? []
+                if PDFStatementLines.rows(from: textLines).count > 1 { return .success((textLines, false)) }
+                do {
+                    return .success((try PDFOCRReader.lines(from: data), true))
+                } catch {
+                    return .failure(error)
+                }
+            }.value
+            readingPDF = false
+            switch outcome {
+            case .success(let read):
+                readByOCR = read.ocr
+                structureSample = StatementStructure.masked(lines: read.lines).joined(separator: "\n")
+                parse(rows: PDFStatementLines.rows(from: read.lines), fileName: fileName,
+                      columns: (0, PDFStatementLines.columns))
+            case .failure:
+                error = "Bu PDF okunamadı. Bankanın uygulamasından ekstreyi Excel olarak almayı dene."
+            }
         }
     }
 
