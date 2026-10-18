@@ -1,6 +1,45 @@
 # Ecoomix
 
-Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygulaması (SwiftUI + SwiftData + iCloud).
+<p align="center">
+  <img src="docs/images/banner.png" alt="Ecoomix: kişisel gelir-gider, taksit ve abonelik takibi" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/iOS-26-000000?logo=apple&logoColor=white" alt="iOS 26">
+  <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
+  <img src="https://img.shields.io/badge/SwiftUI%20%2B%20SwiftData-iCloud-0A84FF" alt="SwiftUI + SwiftData + iCloud">
+  <img src="https://img.shields.io/badge/lisans-MIT-118C6B" alt="MIT lisansı">
+</p>
+
+Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygulaması (SwiftUI + SwiftData + iCloud). Tüm veriler cihazda ve kendi iCloud hesabında durur; sunucu yoktur.
+
+*A personal income/expense, credit-card installment and subscription tracker for iPhone. The interface is in Turkish.*
+
+## Ekranlar
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/ekran-ozet.png" width="200" alt="Özet ekranı"><br><b>Özet</b><br><sub>Aylık net, bütçeler</sub></td>
+    <td align="center"><img src="docs/images/ekran-islemler.png" width="200" alt="İşlemler ekranı"><br><b>İşlemler</b><br><sub>Günlere göre, arama ve filtre</sub></td>
+    <td align="center"><img src="docs/images/ekran-raporlar.png" width="200" alt="Raporlar ekranı"><br><b>Raporlar</b><br><sub>Gelir-gider, tasarruf oranı</sub></td>
+    <td align="center"><img src="docs/images/ekran-dagilim.png" width="200" alt="Harcama dağılımı"><br><b>Harcama dağılımı</b><br><sub>Kategoriler, yaklaşan ödemeler</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/images/ekran-taksitler.png" width="200" alt="Taksitler ekranı"><br><b>Taksitler</b><br><sub>Aylık yük, biten taksitler</sub></td>
+    <td align="center"><img src="docs/images/ekran-abonelikler.png" width="200" alt="Abonelikler ekranı"><br><b>Abonelikler</b><br><sub>Aylık ve yıllık maliyet</sub></td>
+    <td align="center"><img src="docs/images/ekran-oneriler.png" width="200" alt="Öneriler ekranı"><br><b>Öneriler</b><br><sub>Kural tabanlı ve Gemini</sub></td>
+    <td align="center"><img src="docs/images/ekran-ice-aktarma.png" width="200" alt="Ekstre içe aktarma"><br><b>Ekstre içe aktarma</b><br><sub>PDF, Excel, CSV</sub></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/images/karanlik-mod.png" width="720" alt="Karanlık modda Özet, Raporlar ve İşlemler">
+  <br><sub>Karanlık mod</sub>
+</p>
+
+<sub>Görüntülerdeki tüm veriler uygulamanın demo verisidir (`-demoData`). Yeniden üretmek için: `make readme-images`.</sub>
+
+## Özellikler
 
 - **Özet:** aylık net, bütçeler, kategori dağılımı, yaklaşan ödemeler, tasarruf önerileri
 - **İşlemler:** hızlı ekleme; kredi kartında 2–24 taksit; arama ve filtre
@@ -30,6 +69,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 | `scripts/check-gemini.sh` | Anahtarı ve istek biçimini küçük bir istekle hızlıca dener (anahtar yazdırılmaz) |
 | `make demo` | Simülatörde 12 aylık demo veriyle açar (ayrı yerel dosya, iCloud'a gitmez) |
 | `make fixtures` | UI testindeki Akbank düzenli örnek PDF'i (`akbank-ornek.pdf`) yeniden üretir |
+| `make readme-images` | README'deki ekran görüntülerini ve kapak görselini demo veriyle yeniden üretir (Python + Pillow) |
 | `make screens` | Demo veriyle ekranları gezip `build/screens/` altına görüntü kaydeder |
 | `make device UDID=…` | Kabloyla bağlı iPhone'a kurar |
 
