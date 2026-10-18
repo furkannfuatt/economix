@@ -27,6 +27,8 @@ struct ImportView: View {
     @State private var categorizing = false
     @State private var categoryMessage: String?
     @State private var categoryError: String?
+    @State private var confirmRemoval = false
+    @State private var removalMessage: String?
 
     private static let types: [UTType] = [.pdf, .commaSeparatedText, .tabSeparatedText, .plainText,
                                           UTType(filenameExtension: "xlsx"), UTType(filenameExtension: "xls")]
@@ -85,6 +87,23 @@ struct ImportView: View {
                      : "Bankanın uygulamasından ya da internet şubesinden indirdiğin PDF, Excel (.xlsx) veya CSV ekstresini seç. Bu karta elle girdiğin kayıtlar otomatik eşleştirilir. Dosya cihazında işlenir, hiçbir yere gönderilmez.")
             }
 
+            if let account, let imported, !imported.isEmpty {
+                Section {
+                    Button("Önceki içe aktarımı sil", systemImage: "trash", role: .destructive) { confirmRemoval = true }
+                        .tint(.red)
+                } header: {
+                    Text("Baştan aktarmak için")
+                } footer: {
+                    Text(Self.removalText(imported, accountName: account.name))
+                }
+            }
+            if let removalMessage {
+                Section {
+                    Label(removalMessage, systemImage: "checkmark.circle")
+                        .foregroundStyle(ChartPalette.single)
+                }
+            }
+
             Section("Desteklenenler") {
                 Label("PDF, Excel (.xlsx) ve CSV ekstreler", systemImage: "doc.text")
                 Label("Garanti BBVA (Bonus), Yapı Kredi (World), Akbank (Axess)", systemImage: "building.columns")
@@ -102,6 +121,41 @@ struct ImportView: View {
         }
         // Alttaki "İşlem ekle" çubuğu son satırları örtmesin.
         .contentMargins(.bottom, 90, for: .scrollContent)
+        .confirmationDialog("Önceki içe aktarım silinsin mi?", isPresented: $confirmRemoval, titleVisibility: .visible) {
+            Button("Sil ve öğrenilen kategorileri unut", role: .destructive) { removeImported(forgetLearned: true) }
+            Button("Yalnızca kayıtları sil", role: .destructive) { removeImported(forgetLearned: false) }
+            Button("Vazgeç", role: .cancel) {}
+        } message: {
+            Text("Geri alınamaz; iCloud'daki kopyadan da silinir. Öğrenilen kategorileri unutursan ekstre yeni sözlükle baştan kategorilenir; o işyerleri için elle seçtiklerin de unutulur.")
+        }
+    }
+
+    /// Seçili hesaba daha önce içe aktarılanlar.
+    private var imported: ImportedRecords? {
+        account.flatMap { try? ImportService(context: context).importedRecords(for: $0) }
+    }
+
+    static func removalText(_ records: ImportedRecords, accountName: String) -> String {
+        var removed: [String] = []
+        if records.entries > 0 { removed.append("\(records.entries) işlem") }
+        if records.plans > 0 { removed.append("\(records.plans) taksit planı") }
+        var text = removed.isEmpty ? "" : "\(accountName) için ekstreden eklenen \(removed.joined(separator: " ve ")) silinir. "
+        if records.linked > 0 {
+            text += "Elle girdiğin \(records.linked) kayıt kalır; yalnızca ekstreyle eşleşmesi kaldırılır. "
+        }
+        return text + "Ardından ekstreyi yeniden seçebilirsin."
+    }
+
+    private func removeImported(forgetLearned: Bool) {
+        guard let account, let records = imported else { return }
+        do {
+            try ImportService(context: context).removeImported(for: account, forgetLearned: forgetLearned)
+            var parts = ["\(records.entries) işlem", "\(records.plans) taksit planı"]
+            if forgetLearned, records.rules > 0 { parts.append("\(records.rules) öğrenilmiş kategori") }
+            removalMessage = "Silindi: " + parts.joined(separator: ", ") + ". Şimdi ekstreyi yeniden seçebilirsin."
+        } catch {
+            self.error = "Silinemedi: \(error.localizedDescription)"
+        }
     }
 
     @ViewBuilder

@@ -82,6 +82,18 @@ final class ImportFlowTests: XCTestCase {
         else { commit.tap() }
         XCTAssertTrue(app.staticTexts["İçe aktarıldı"].waitForExistence(timeout: 10))
         capture("14-import-sonuc")
+
+        // Aynı kartın içe aktarımı silinip baştan aktarılabilir.
+        app.buttons["Başka dosya"].tap()
+        let remove = app.buttons["Önceki içe aktarımı sil"]
+        XCTAssertTrue(remove.waitForExistence(timeout: 5), "Silme düğmesi görünmüyor")
+        capture("14b-import-sil")
+        remove.tap()
+        app.buttons["Sil ve öğrenilen kategorileri unut"].tap()
+        let removed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Silindi:")).firstMatch
+        XCTAssertTrue(removed.waitForExistence(timeout: 5), "Silme sonucu görünmüyor")
+        XCTAssertFalse(remove.exists, "Silinecek bir şey kalmamalı")
+        capture("14c-import-silindi")
     }
 
     @MainActor

@@ -202,6 +202,8 @@ final class InstallmentPlan {
     var purchaseDate: Date = Date.now
     var closedEarlyAt: Date?
     var createdAt: Date = Date.now
+    /// Ekstreden oluşturuldu; içe aktarım geri alınırsa silinir.
+    var isImported: Bool = false
 
     var account: Account?
     var category: EntryCategory?

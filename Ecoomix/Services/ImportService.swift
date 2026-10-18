@@ -66,6 +66,20 @@ struct ImportSummary {
     var amountsCorrected = 0
 }
 
+/// Bir hesaba daha önce içe aktarılmış kayıtlar.
+struct ImportedRecords {
+    /// Ekstreden eklenen işlemler (harcama, iade, ödeme…).
+    var entries = 0
+    /// Ekstreden oluşturulan taksit planları.
+    var plans = 0
+    /// Ekstreyle eşleştirilmiş elle girilen kayıtlar (silinmez, yalnızca eşleşme kaldırılır).
+    var linked = 0
+    /// Bu kayıtların işyerleri için öğrenilmiş kategoriler.
+    var rules = 0
+
+    var isEmpty: Bool { entries == 0 && plans == 0 && linked == 0 }
+}
+
 struct ImportService {
     let context: ModelContext
     var calendar: Calendar = FinanceCalendar.calendar
@@ -168,6 +182,7 @@ struct ImportService {
                 let plan = try ledger.addInstallmentPurchase(total: row.amount * marker.total, count: marker.total,
                                                              purchaseDate: purchase, category: candidate.category,
                                                              account: account, merchant: row.description)
+                plan.isImported = true
                 plan.sortedEntries.first { $0.installmentIndex == marker.current }?.importHash = row.importHash
                 summary.plansCreated += 1
             case (_, .payment):
@@ -299,3 +314,62 @@ struct ImportService {
         return nil
     }
 }
+
+// MARK: - İçe aktarımı geri alma
+
+extension ImportService {
+    private struct ImportedSet {
+        var entries: [LedgerEntry] = []
+        var plans: [InstallmentPlan] = []
+        var linked: [LedgerEntry] = []
+        var rules: [MerchantRule] = []
+    }
+
+    func importedRecords(for account: Account) throws -> ImportedRecords {
+        let set = try collectImported(for: account)
+        return ImportedRecords(entries: set.entries.count, plans: set.plans.count, linked: set.linked.count,
+                               rules: set.rules.count)
+    }
+
+    /// Hesaba içe aktarılmış işlemleri ve ekstreden oluşturulan taksit planlarını siler; elle girilen kayıtlar kalır,
+    /// yalnızca ekstreyle eşleşmeleri kaldırılır (ekstre yeniden aktarılınca tekrar eşleşirler).
+    /// `forgetLearned`: bu işyerleri için öğrenilmiş kategoriler de unutulur.
+    func removeImported(for account: Account, forgetLearned: Bool) throws {
+        let set = try collectImported(for: account)
+        set.entries.forEach(context.delete)
+        set.plans.forEach(context.delete)
+        for entry in set.linked { entry.importHash = nil }
+        if forgetLearned { set.rules.forEach(context.delete) }
+        try context.save()
+    }
+
+    private func collectImported(for account: Account) throws -> ImportedSet {
+        var set = ImportedSet()
+        let entries = try context.fetch(FetchDescriptor<LedgerEntry>())
+        set.entries = entries.filter { $0.source == .imported && ($0.account === account || $0.toAccount === account) }
+
+        let plans = try context.fetch(FetchDescriptor<InstallmentPlan>()).filter { $0.account === account }
+        set.plans = plans.filter { $0.isImported || Self.wasCreatedByLegacyImport($0) }
+
+        let removed = Set(set.entries.map(ObjectIdentifier.init))
+            .union(set.plans.flatMap { $0.entries ?? [] }.map(ObjectIdentifier.init))
+        set.linked = entries.filter { entry in
+            entry.importHash != nil && !removed.contains(ObjectIdentifier(entry))
+                && (entry.account === account || entry.toAccount === account || entry.installmentPlan?.account === account)
+        }
+
+        let merchants = Set((set.entries.map(\.merchant) + set.plans.map(\.merchant)).map(MerchantNormalizer.normalize))
+        set.rules = try context.fetch(FetchDescriptor<MerchantRule>()).filter { merchants.contains($0.pattern) }
+        return set
+    }
+
+    /// İşaretten önceki sürümler: ekstreden oluşan planda, ekstredeki taksitin parmak izi plan adıyla birebir tutar.
+    /// Elle girilip ekstreyle eşleşen planda parmak izi ekstredeki açıklamadan gelir, plan adı kullanıcınınkidir.
+    private static func wasCreatedByLegacyImport(_ plan: InstallmentPlan) -> Bool {
+        (plan.entries ?? []).contains { entry in
+            entry.importHash != nil && entry.importHash == StatementParser.importHash(date: entry.date, amount: entry.amount,
+                                                                                     description: plan.merchant)
+        }
+    }
+}
+

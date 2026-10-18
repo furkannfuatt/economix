@@ -58,6 +58,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
    - Her elle girdiğin kayıt en fazla bir ekstre satırıyla eşleşir; önce tam tutar, sonra en küçük fark aranır. Her satırın altında hangi kaydınla eşleştiği yazar.
    - "TAKSİT 3/6" gibi satırlar mevcut plana bağlanır. Plan yoksa alım tarihi geriye hesaplanarak yeni plan oluşturulur.
    - Karta yapılan ödemeler varsayılan olarak kapalıdır; iadeler gelir olarak eklenir.
+   - Bir kartın ekstresini baştan aktarmak için aynı ekranda kartı seçip **Önceki içe aktarımı sil**'e dokun. Ekstreden eklenen işlemler ve taksit planları silinir. Elle girdiğin kayıtlar kalır; yalnızca ekstreyle eşleşmeleri kaldırılır. İstersen o işyerleri için öğrenilen kategoriler de unutulur.
    - Kampanya ödülleri, bonuslar ve chip-para/puan hareketleri ("ilk harcamaya ödül", "Kullanılan chip-para") da ödemeler gibi kapalı gelir. Akbank chip-para kazanımını eksi işareti olmadan ayrı kolonda yazdığı için bu satırlar açıklamadaki kesin ifadelerden tanınır.
 
 **Kategoriler** şu sırayla belirlenir:
