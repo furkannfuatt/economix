@@ -17,6 +17,8 @@ public enum StatementRowKind: String, Sendable {
     case refund
     /// Karta yapılan ödeme.
     case payment
+    /// Kampanya ödülü, bonus, puan ya da chip-para kullanımı (karta alacak; ödeme ya da iade değil).
+    case reward
     /// Hesaba giren para.
     case income
 }
@@ -100,6 +102,20 @@ public enum StatementParser {
     /// Satır içinde geçerse atlanan özet satırları.
     private static let summaryKeywords = ["ONCEKI DONEM", "DEVREDEN", "TOPLAM", "ASGARI", "HESAP OZETI", "DONEM BORCU"]
     private static let paymentKeywords = ["ODEME", "TESEKKUR", "ODEMENIZ"]
+    /// Ödül/bonus ifadeleri: kelime başında geçerse yeter ("ODULU", "KAMPANYASI").
+    /// Kesin olanlar işyeri adında geçmez; ötekiler ("BONUS MARKET", "HEDIYE DUNYASI") ancak karta alacak satırında ödüldür.
+    static let strongRewardStems = ["CHIPPARA", "ODUL", "CASHBACK", "PARAPUAN", "WORLDPUAN", "MAXIPUAN", "MAXIMIL", "HOSGELDIN"]
+    static let weakRewardStems = ["BONUS", "PUAN", "KAMPANYA", "HEDIYE", "INDIRIM", "KAZANC", "KAZANIM", "KAZANDIN"]
+    static let rewardPhrases = ["CHIP PARA", "ILK HARCAMA"]
+
+    /// Açıklama kampanya ödülü, bonus, puan ya da chip-para hareketi mi? `strict`: yalnızca kesin ifadeler.
+    public static func isReward(_ description: String, strict: Bool = false) -> Bool {
+        let normalized = MerchantNormalizer.normalize(description)
+        let padded = " " + normalized + " "
+        if rewardPhrases.contains(where: { padded.contains(" \($0)") }) { return true }
+        let stems = strict ? strongRewardStems : strongRewardStems + weakRewardStems
+        return normalized.split(separator: " ").contains { word in stems.contains { word.hasPrefix($0) } }
+    }
 
     // MARK: Başlık
 
@@ -197,7 +213,7 @@ public enum StatementParser {
             // Negatif satırda ödeme/iade ifadesi varsa bu bir kart ekstresidir: harcamalar pozitiftir.
             let creditMarkers = paymentKeywords + ["IADE"]
             let hasCardCredits = amountRows.contains { raw in
-                raw.signed.isNegative && creditMarkers.contains { fold(raw.description).contains($0) }
+                raw.signed.isNegative && (creditMarkers.contains { fold(raw.description).contains($0) } || isReward(raw.description))
             }
             let positives = amountRows.filter { $0.signed.minor > 0 }.count
             expensesPositive = hasCardCredits || positives >= amountRows.count - positives
@@ -209,10 +225,17 @@ public enum StatementParser {
                 kind = raw.signed.isNegative ? .expense : .income
             } else if expensesPositive {
                 if raw.signed.minor > 0 {
-                    kind = .expense
+                    // Akbank chip-para kazanımını ayrı kolonda işaretsiz yazar ("ilk_harcamaya_ödül").
+                    kind = isReward(raw.description, strict: true) ? .reward : .expense
                 } else {
                     let folded = fold(raw.description)
-                    kind = paymentKeywords.contains { folded.contains($0) } ? .payment : .refund
+                    if paymentKeywords.contains(where: { folded.contains($0) }) {
+                        kind = .payment
+                    } else if !folded.contains("IADE"), isReward(raw.description) {
+                        kind = .reward
+                    } else {
+                        kind = .refund
+                    }
                 }
             } else {
                 kind = raw.signed.isNegative ? .expense : .income

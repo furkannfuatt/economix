@@ -115,4 +115,36 @@ struct ImportServiceTests {
         #expect(refund.kind == .income)
         #expect(refund.source == .imported)
     }
+
+    @Test("Ödül, bonus ve chip-para alacakları karta ödeme gibi varsayılan olarak dışarıda")
+    func rewardsExcluded() throws {
+        let card = f.makeCard()
+        let result = try parse([["01.10.2026", "MIGROS", "300,00"],
+                                ["02.10.2026", "ILK HARCAMANIZA 100 TL ODUL", "-100,00"],
+                                ["03.10.2026", "MIGROS -Kullanilan chip-para", "-25,00"]])
+        let service = ImportService(context: f.context)
+        var candidates = try service.prepare(result, account: card)
+        #expect(candidates[1].status == .reward && !candidates[1].include)
+        #expect(candidates[2].status == .reward && !candidates[2].include)
+        candidates[1].include = true
+        try service.commit(candidates, account: card)
+        let reward = try #require(try f.context.fetch(FetchDescriptor<LedgerEntry>()).first { $0.amountMinor == 100_00 })
+        #expect(reward.kind == .income, "Açılırsa gelir olarak eklenir")
+        #expect(try f.context.fetch(FetchDescriptor<LedgerEntry>()).count == 2)
+    }
+
+    @Test("Yalnızca kullanıcının ya da Gemini'nin seçtiği kategori öğrenilir; sözlük önerisi öğrenilmez")
+    func learnsOnlyChosenCategories() throws {
+        let card = f.makeCard(), market = seededMarket(), other = f.makeCategory("Diğer")
+        let result = try parse([["01.10.2026", "MIGROS KADIKOY", "250,00"],
+                                ["02.10.2026", "AYSE TEYZE EV YEMEKLERI", "120,00"]])
+        let service = ImportService(context: f.context)
+        var candidates = try service.prepare(result, account: card)
+        #expect(candidates[0].category === market)
+        ImportCandidate.applyCategory(other, at: 1, in: &candidates)
+        try service.commit(candidates, account: card)
+        let rules = try f.context.fetch(FetchDescriptor<MerchantRule>())
+        #expect(rules.map(\.pattern) == ["AYSE TEYZE EV YEMEKLERI"])
+    }
 }
+

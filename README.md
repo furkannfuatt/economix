@@ -58,6 +58,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
    - Her elle girdiğin kayıt en fazla bir ekstre satırıyla eşleşir; önce tam tutar, sonra en küçük fark aranır. Her satırın altında hangi kaydınla eşleştiği yazar.
    - "TAKSİT 3/6" gibi satırlar mevcut plana bağlanır. Plan yoksa alım tarihi geriye hesaplanarak yeni plan oluşturulur.
    - Karta yapılan ödemeler varsayılan olarak kapalıdır; iadeler gelir olarak eklenir.
+   - Kampanya ödülleri, bonuslar ve chip-para/puan hareketleri ("ilk harcamaya ödül", "Kullanılan chip-para") da ödemeler gibi kapalı gelir. Akbank chip-para kazanımını eksi işareti olmadan ayrı kolonda yazdığı için bu satırlar açıklamadaki kesin ifadelerden tanınır.
 
 **Kategoriler** şu sırayla belirlenir:
 1. Senin daha önceki seçimlerin. Aynı markanın başka şube ya da şehir yazımı da tanınır ("MIGROS KADIKÖY" için seçtiğin kategori "MIGROS SANAL MARKET İSTANBUL"a da gelir).
@@ -65,7 +66,13 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 3. Önizlemede bir satıra kategori seçince, aynı işyerinin kategorisiz diğer satırları da onu alır.
 4. Kalan kategorisiz satırlar için **Gemini ile belirle** düğmesi. Gemini'ye yalnızca işyeri adları ve kategori adların gider; tutar ve tarih gitmez. Gemini emin değilse satırı boş bırakır.
 
-İçe aktarılan her kategori seçimi öğrenilir; sonraki ekstrelerde otomatik gelir.
+Senin ve Gemini'nin seçtiği kategoriler öğrenilir ve sonraki ekstrelerde otomatik gelir. Sözlükten gelen öneriler öğrenilmez; böylece sözlük düzeldiğinde eski bir hatalı öneri kural olarak kalmaz.
+
+Sözlükte öne çıkanlar:
+- **Online Alışveriş:** Hepsiburada/Hepsipay, Amazon (iyzico üzerinden de), N11, Trendyol, Pazarama, Temu, AliExpress ve benzerleri. Alan adlı (`pazarama.com`), bitişik (`AmazonMarketTR`) ve kesik (`HEPSIBU`) yazımlar da tanınır. Trendyol Yemek/Go, HepsiExpress, Amazon Prime ve AWS kendi kategorilerinde kalır.
+- **Market:** ŞOK, A101, BİM, Migros, CarrefourSA ve adında market, süpermarket ya da gıda geçen her işyeri.
+- **Eğlence:** sinemalar (Cinemaximum, Paribu Cineverse, adında sinema/cinema geçenler), bilet siteleri, tema parkları, oyun mağazaları.
+- **Abonelikler:** yapay zekâ ve yazılım servisleri (fal, OpenAI, Midjourney, ElevenLabs, Cursor, Vercel…). Bunlar kullandıkça çekildiği için yalnızca kategori atanır; düzenli ödeme oluşturulmaz.
 
 **Banka kartı (debit):** Ayarlar > Hesaplar ve kartlar > + menüsünde her banka için kredi kartı ve banka kartı şablonu var. Banka kartı harcamaları vadesiz hesap dökümünde görünür. Bu dökümü içe aktarırken bir banka hesabı ya da banka kartı seç; eşleştirme tüm banka hesaplarına ve banka kartlarına elle girdiğin kayıtlara bakar. Kredi kartı ekstresi ise yalnızca o kartın kayıtlarıyla karşılaştırılır.
 

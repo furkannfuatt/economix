@@ -19,6 +19,8 @@ struct ImportCandidate: Identifiable {
         case newInstallmentPlan
         /// Karta yapılan ödeme.
         case payment
+        /// Kampanya ödülü, bonus, puan ya da chip-para kullanımı.
+        case reward
     }
 
     let row: StatementRow
@@ -29,6 +31,9 @@ struct ImportCandidate: Identifiable {
     var matchedEntry: LedgerEntry?
     /// Yakın tutar eşleşmesinde ekstre ile kayıt arasındaki fark.
     var amountDifference: Money?
+    /// Kategoriyi kullanıcı ya da Gemini seçti: içe aktarınca bu işyeri için öğrenilir.
+    /// Sözlükten gelen öneriler öğrenilmez; sözlük düzeldiğinde eski hatalı öneri kural olarak kalmasın.
+    var learnsCategory = false
 
     var id: Int { row.lineNumber }
 
@@ -36,6 +41,7 @@ struct ImportCandidate: Identifiable {
     @discardableResult
     static func applyCategory(_ category: EntryCategory?, at index: Int, in candidates: inout [ImportCandidate]) -> Int {
         candidates[index].category = category
+        candidates[index].learnsCategory = category != nil
         let brand = MerchantNormalizer.brandKey(candidates[index].row.description)
         guard category != nil, !brand.isEmpty else { return 0 }
         var updated = 0
@@ -43,6 +49,7 @@ struct ImportCandidate: Identifiable {
             && candidates[other].row.kind == .expense
             && MerchantNormalizer.brandKey(candidates[other].row.description) == brand {
             candidates[other].category = category
+            candidates[other].learnsCategory = true
             updated += 1
         }
         return updated
@@ -94,6 +101,9 @@ struct ImportService {
                 candidates[index].include = false
             } else if row.kind == .payment {
                 candidates[index].status = .payment
+                candidates[index].include = false
+            } else if row.kind == .reward {
+                candidates[index].status = .reward
                 candidates[index].include = false
             } else if let marker = row.installment, row.kind == .expense {
                 if let entry = planEntry(for: row, marker: marker, account: account, excluding: usedPlanEntries) {
@@ -168,6 +178,10 @@ struct ImportService {
                 try ledger.addEntry(amount: row.amount, kind: .income, date: row.date, category: candidate.category,
                                     account: account, merchant: row.description, note: "İade", source: .imported,
                                     importHash: row.importHash)
+            case (_, .reward):
+                try ledger.addEntry(amount: row.amount, kind: .income, date: row.date, category: nil,
+                                    account: account, merchant: row.description, note: "Ödül / bonus", source: .imported,
+                                    importHash: row.importHash)
             case (_, .income):
                 try ledger.addEntry(amount: row.amount, kind: .income, date: row.date, category: candidate.category,
                                     account: account, merchant: row.description, source: .imported,
@@ -176,7 +190,7 @@ struct ImportService {
                 try ledger.addEntry(amount: row.amount, kind: .expense, date: row.date, category: candidate.category,
                                     account: account, merchant: row.description, source: .imported,
                                     importHash: row.importHash)
-                if let category = candidate.category {
+                if let category = candidate.category, candidate.learnsCategory {
                     try ledger.learnCategory(merchant: row.description, category: category)
                 }
             }
@@ -268,7 +282,7 @@ struct ImportService {
     private func kindMatches(_ entry: LedgerEntry, _ row: StatementRow) -> Bool {
         switch row.kind {
         case .expense: entry.kind == .expense
-        case .income, .refund: entry.kind == .income
+        case .income, .refund, .reward: entry.kind == .income
         case .payment: entry.kind == .transfer
         }
     }

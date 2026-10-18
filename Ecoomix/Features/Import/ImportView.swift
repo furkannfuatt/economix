@@ -165,6 +165,8 @@ struct ImportView: View {
             candidateSection("Mevcut taksit planında", status: .installmentKnown)
             candidateSection("Karta ödeme", status: .payment,
                              footer: "Ödemeleri genelde banka hesabından transfer olarak girersin; çift saymamak için kapalı.")
+            candidateSection("Ödül / bonus", status: .reward,
+                             footer: "Kampanya ödülleri, bonuslar ve chip-para/puan kullanımları harcama sayılmaz; karta ödeme gibi kapalı. İstersen açıp gelir olarak ekleyebilirsin.")
             candidateSection("Zaten eklenmiş", status: .duplicate)
         }
         .safeAreaInset(edge: .bottom) {
@@ -263,6 +265,7 @@ struct ImportView: View {
             for index in targets {
                 if let category = mapping[candidates[index].row.description] {
                     candidates[index].category = category
+                    candidates[index].learnsCategory = true
                     assigned += 1
                 }
             }
@@ -412,6 +415,7 @@ private struct CandidateRow: View {
                         Text("· Taksit \(marker.current)/\(marker.total)")
                     }
                     if candidate.row.kind == .refund { Text("· İade") }
+                    if candidate.row.kind == .reward { Text("· Ödül") }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)

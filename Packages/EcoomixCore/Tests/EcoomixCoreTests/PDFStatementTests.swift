@@ -132,11 +132,11 @@ struct AkbankLayoutTests {
         ])
     }
 
-    @Test("Uçtan uca: ödeme, iade, harcama ve toplam/kaçıncı sıralı taksitler")
+    @Test("Uçtan uca: ödeme, chip-para, harcama ve toplam/kaçıncı sıralı taksitler")
     func endToEnd() throws {
         let result = try StatementParser.parse(rows: PDFStatementLines.rows(from: lines), profile: .akbank,
                                                columns: (headerIndex: 0, map: PDFStatementLines.columns))
-        #expect(result.rows.map(\.kind) == [.payment, .expense, .expense, .expense, .refund, .expense])
+        #expect(result.rows.map(\.kind) == [.payment, .expense, .expense, .expense, .reward, .expense])
         #expect(result.rows[0].amount == tl(5_000))
         #expect(result.rows[2].installment == InstallmentMarker(current: 2, total: 3))
         #expect(result.rows[2].amount == Money(minor: 99_000))
@@ -154,3 +154,36 @@ struct AkbankLayoutTests {
         #expect(StatementParser.installmentMarker(in: text) == expected)
     }
 }
+
+@Suite("Ödül ve bonus satırları")
+struct RewardRowTests {
+    @Test("Kampanya ödülü, bonus, puan ve chip-para alacakları ödül sayılır; iade ve ödeme ayrı kalır")
+    func rewards() throws {
+        let rows = [["Tarih", "Açıklama", "Tutar"],
+                    ["01.09.2026", "MIGROS", "500,00"],
+                    ["02.09.2026", "İLK HARCAMANIZA 100 TL ÖDÜL", "-100,00"],
+                    ["03.09.2026", "MIGROS -Kullanılan chip-para", "-25,00"],
+                    ["04.09.2026", "BONUS FLAŞ KAMPANYASI", "-30,00"],
+                    ["05.09.2026", "ZARA IADE", "-299,90"],
+                    ["06.09.2026", "ÖDEMENİZ İÇİN TEŞEKKÜR EDERİZ", "-5.000,00"],
+                    ["07.09.2026", "WORLDPUAN KAZANIM", "-12,00"],
+                    ["08.09.2026", "HOŞGELDİN HEDİYESİ", "-50,00"],
+                    ["09.09.2026", "BOYNER", "-80,00"]]
+        let result = try StatementParser.parse(rows: rows, profile: .generic)
+        #expect(result.rows.map(\.kind) == [.expense, .reward, .reward, .reward, .refund, .payment, .reward, .reward, .refund])
+    }
+
+    @Test("İşaretsiz yazılan chip-para kazanımı da ödüldür; adında bonus/hediye geçen gerçek alışveriş harcama kalır")
+    func positiveRewards() throws {
+        let rows = [["Tarih", "Açıklama", "Tutar"],
+                    ["01.09.2026", "ODEMENIZ ICIN TESEKKURLER", "-1.000,00"],
+                    ["02.09.2026", "ilk_harcamaya_ödül", "150,00"],
+                    ["03.09.2026", "AXESS CHIP-PARA KAZANIMI", "12,00"],
+                    ["04.09.2026", "HEDIYE DUNYASI", "80,00"],
+                    ["05.09.2026", "BONUS MARKET", "45,00"],
+                    ["06.09.2026", "KAMPANYA OUTLET", "60,00"]]
+        let result = try StatementParser.parse(rows: rows, profile: .generic)
+        #expect(result.rows.map(\.kind) == [.payment, .reward, .reward, .expense, .expense, .expense])
+    }
+}
+

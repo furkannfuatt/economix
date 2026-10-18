@@ -13,6 +13,7 @@ struct CategorySeed {
 enum SeedService {
     static let categories: [CategorySeed] = [
         .init(key: "market", name: "Market", icon: "cart.fill", color: "#34C759", kind: .expense),
+        .init(key: "online", name: "Online Alışveriş", icon: "shippingbox.fill", color: "#00C7BE", kind: .expense),
         .init(key: "yemek", name: "Yemek & Kafe", icon: "fork.knife", color: "#FF9500", kind: .expense),
         .init(key: "ulasim", name: "Ulaşım & Yakıt", icon: "car.fill", color: "#32ADE6", kind: .expense),
         .init(key: "kira", name: "Kira", icon: "house.fill", color: "#AF52DE", kind: .expense),
@@ -52,6 +53,24 @@ enum SeedService {
             context.insert(cash)
         }
         try context.save()
+    }
+
+    /// İlk sürümden sonra eklenen varsayılan kategoriler.
+    static let addedLater = ["online"]
+
+    /// Sonradan eklenen varsayılanları mevcut kuruluma bir kez ekler; kullanıcı silerse geri gelmez.
+    /// Kurulum yapılmamışsa (hiç varsayılan kategori yoksa) dokunmaz: kurulum hepsini ekler.
+    static func addNewDefaults(in context: ModelContext, defaults: UserDefaults = .standard) throws {
+        let keys = Set(try context.fetch(FetchDescriptor<EntryCategory>()).compactMap(\.seedKey))
+        guard !keys.isEmpty else { return }
+        for key in addedLater where !defaults.bool(forKey: "seed.added.\(key)") {
+            defaults.set(true, forKey: "seed.added.\(key)")
+            guard !keys.contains(key), let index = categories.firstIndex(where: { $0.key == key }) else { continue }
+            let seed = categories[index]
+            context.insert(EntryCategory(name: seed.name, icon: seed.icon, colorHex: seed.color, kind: seed.kind,
+                                         sortOrder: index, seedKey: seed.key))
+        }
+        if context.hasChanges { try context.save() }
     }
 
     /// iCloud'dan gelen kopyalarla çift oluşan varsayılanları birleştirir.

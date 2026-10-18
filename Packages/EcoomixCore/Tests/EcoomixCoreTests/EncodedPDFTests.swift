@@ -212,6 +212,7 @@ struct EncodedPDFTests {
         ("990.00x1", 460, 725),
         ("10/09/2026", 40, 710), ("ŞOK MARKET KADIKÖY", 110, 710), ("245.50", 380, 709.7),
         ("12/09/2026", 40, 695), ("DOĞAN KIRTASİYE", 110, 695), ("89.90", 380, 695),
+        ("13/09/2026", 40, 680), ("ilk_harcamaya_ödül", 110, 680), ("150.00", 520, 680),
         ("Ödemeniz için teşekkür ederiz. Ağustos ayı yaptı\u{200B}ğ\u{200B}ınız", 40, 650),
     ]
 
@@ -225,6 +226,7 @@ struct EncodedPDFTests {
             "05/09/2026 HEPSİBURADA/İSTANBUL (2,970.00 TL) 3/2.taksit 990.00 990.00x1",
             "10/09/2026 ŞOK MARKET KADIKÖY 245.50",
             "12/09/2026 DOĞAN KIRTASİYE 89.90",
+            "13/09/2026 ilk_harcamaya_ödül 150.00",
             "Ödemeniz için teşekkür ederiz. Ağustos ayı yaptığınız",
         ])
     }
@@ -235,13 +237,13 @@ struct EncodedPDFTests {
         let lines = try PDFStatementText.lines(from: pdf)
         let result = try StatementParser.parse(rows: PDFStatementLines.rows(from: lines), profile: .akbank,
                                                columns: (headerIndex: 0, map: PDFStatementLines.columns))
-        #expect(result.rows.map(\.kind) == [.payment, .expense, .expense, .expense])
+        #expect(result.rows.map(\.kind) == [.payment, .expense, .expense, .expense, .reward])
         #expect(result.rows.map(\.description) == [
             "AKBANK Internet Subesi Odeme Tesekkurler", "HEPSİBURADA/İSTANBUL (2,970.00 TL) 3/2.taksit",
-            "ŞOK MARKET KADIKÖY", "DOĞAN KIRTASİYE",
+            "ŞOK MARKET KADIKÖY", "DOĞAN KIRTASİYE", "ilk_harcamaya_ödül",
         ])
         #expect(result.rows[1].installment == InstallmentMarker(current: 2, total: 3))
-        #expect(result.rows.map(\.amount) == [tl(5_000), tl(990), Money(minor: 24_550), Money(minor: 8_990)])
+        #expect(result.rows.map(\.amount) == [tl(5_000), tl(990), Money(minor: 24_550), Money(minor: 8_990), tl(150)])
     }
 
     @Test("Metni okunabilen PDF'lerde PDFKit satırları kullanılır")

@@ -106,9 +106,12 @@ struct RootView: View {
 }
 
 enum AppMaintenance {
-    /// Açılışta: iCloud kopyalarını birleştir, kaçırılan düzenli işlemleri üret.
+    /// Açılışta: iCloud kopyalarını birleştir, yeni varsayılanları ekle, eski hataların izlerini onar,
+    /// kaçırılan düzenli işlemleri üret.
     static func runOnLaunch(context: ModelContext) async {
         try? SeedService.deduplicate(in: context)
+        try? SeedService.addNewDefaults(in: context)
+        try? DataRepairs.run(in: context)
         #if DEBUG
         if StoreMode.current == .demo { try? DemoData.loadIfNeeded(into: context) }
         #endif

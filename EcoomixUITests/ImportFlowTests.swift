@@ -36,7 +36,12 @@ final class ImportFlowTests: XCTestCase {
         let installment = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Taksit 2/3")).firstMatch
         for _ in 0..<5 where !installment.exists { app.swipeUp() }
         XCTAssertTrue(installment.exists, "Akbank taksit satırı okunamadı")
+        XCTAssertTrue(app.staticTexts["Online Alışveriş"].exists, "Hepsiburada online alışverişe düşmedi")
         capture("21-akbank-taksit")
+        let reward = app.staticTexts["Ödül / bonus (1)"]
+        for _ in 0..<5 where !reward.exists { app.swipeUp() }
+        XCTAssertTrue(reward.exists, "Ödül satırı ayrı bölümde değil")
+        capture("22-akbank-odul")
     }
 
     /// Gerçek Gemini isteği yapar; yalnızca GEMINI_UI_LIVE=1 ile çalışır.

@@ -187,7 +187,6 @@ struct MerchantCategorizerTests {
 
     @Test("Belirsiz işyeri tahmin edilmez")
     func unknown() {
-        #expect(MerchantCategorizer.suggestedSeedKey(for: "TRENDYOL") == nil)
         #expect(MerchantCategorizer.suggestedSeedKey(for: "ABC LTD STI") == nil)
     }
 }
@@ -247,8 +246,8 @@ struct ExtendedCategorizerTests {
     }
 
     @Test("Taksit yazısı taksi sanılmaz", arguments: [
-        ("HEPSIPAY/HEPSIBU (1,500.00 TL) 3/3.taksit", nil),
-        ("HEPSIBURADA TAKSITLI SATIS", nil),
+        ("HEPSIPAY/HEPSIBU (1,500.00 TL) 3/3.taksit", "online"),
+        ("ABC TAKSITLI SATIS", nil),
         ("SARI TAKSI", "ulasim"),
         ("TAKSICI MEHMET", "ulasim"),
     ] as [(String, String?)])
@@ -256,8 +255,57 @@ struct ExtendedCategorizerTests {
         #expect(MerchantCategorizer.suggestedSeedKey(for: text) == key)
     }
 
-    @Test("Belirsiz pazaryerleri hâlâ tahmin edilmez", arguments: ["TRENDYOL", "HEPSIBURADA", "AMAZON", "N11"])
-    func ambiguous(text: String) {
+    @Test("Online alışveriş: pazaryerleri, ödeme aracısı, alan adı ve kısaltılmış yazımlar", arguments: [
+        "HEPSIBURADA", "HEPSİBURADA/İSTANBUL", "HEPSIPAY/HEPSIBU (1,500.00 TL) 3/3.taksit", "HEPSIPAY", "hepsiburada.com",
+        "IYZICO/AMAZON", "IYZICO/AmazonMarketTR", "AMAZON.COM.TR", "AMZN MKTP TR", "AMAZON TR ISTANBUL",
+        "N11", "N11.COM", "WWW.N11.COM", "TRENDYOL", "TRENDYOL.COM", "TRENDYOLCOM ISTANBUL",
+        "PAZARAMA", "pazarama.com", "PAZARAMA.COM ISTANBUL", "IYZICO/PAZARAMA", "TEMU", "TEMU.COM", "ALIEXPRESS",
+        "SHEIN", "PTTAVM", "EPTTAVM.COM", "SHOPIER*ABC BUTIK", "EBAY", "ETSY", "DOLAP", "GITTIGIDIYOR",
+    ])
+    func onlineShopping(text: String) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == "online")
+    }
+
+    @Test("Pazaryerlerinin yemek, market ve abonelik hizmetleri ayrı kalır", arguments: [
+        ("TRENDYOL YEMEK", "yemek"), ("TRENDYOL GO", "market"), ("TRENDYOLGO", "market"), ("HEPSIEXPRESS", "market"),
+        ("AMAZON PRIME", "abonelik"), ("AMAZON WEB SERVICES", "abonelik"), ("AWS EMEA", "abonelik"),
+        ("IYZICO/AmazonWebServices", "abonelik"),
+    ])
+    func marketplaceServices(text: String, key: String) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == key)
+    }
+
+    @Test("Sinema, bilet, oyun ve eğlence yerleri", arguments: [
+        "CINEMAXIMUM ISTINYE", "PARIBU CINEVERSE", "AVSAR SINEMALARI", "CINEMA PINK", "PRESTIGE SINEMA", "CINEPOP",
+        "IMAX", "BILETIX", "BUBILET", "BILETINIAL", "PASSO", "MOBILET", "ZORLU PSM", "VIALAND", "ISFANBUL",
+        "STEAM", "STEAMGAMES.COM", "PLAYSTATION NETWORK", "BOWLING CENTER", "LUNAPARK",
+    ])
+    func entertainment(text: String) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == "eglence")
+    }
+
+    @Test("Marketler ve gıda geçen her işyeri", arguments: [
+        "SOK MARKETLER TIC", "ŞOK", "CEPTESOK", "CEPTE SOK", "A101 YENI MAGAZACILIK", "A101", "BIM BIRLESIK MAGAZALAR",
+        "BIM", "MIGROS JET", "MIGROS SANAL MARKET", "ABC GIDA SAN TIC", "KARDESLER GIDA", "YILDIZ SUPERMARKET",
+        "OZ HIPERMARKET", "MACROCENTER", "CARREFOURSA", "METRO GROSMARKET", "HAKMAR EXPRESS", "ONUR MARKET", "GETIR",
+        "TARIM KREDI KOOP", "BIZIM TOPTAN", "UYUM MARKET", "OZDILEK", "BEYAN MARKET",
+    ])
+    func groceries(text: String) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == "market")
+    }
+
+    @Test("Yapay zekâ ve yazılım kredileri abonelik sayılır", arguments: [
+        "FAL", "FAL.AI", "FAL AI SAN FRANCISCO", "PAYPAL *FALAI", "FEATURES AND LABELS", "OPENAI *CHATGPT SUBSCR",
+        "MIDJOURNEY INC", "ELEVENLABS.IO", "REPLICATE", "RUNWAYML", "SUNO", "HIGGSFIELD", "CURSOR AI POWERED IDE",
+        "PERPLEXITY AI", "GITHUB INC", "VERCEL INC", "APIFY", "CANVA", "ADOBE", "FIGMA", "DESCRIPT", "NOTION LABS",
+        "GOOGLE GEMINI", "GOOGLE CLOUD", "OPENROUTER", "KLING AI", "HEYGEN", "IDEOGRAM", "LEONARDO AI",
+    ])
+    func aiCredits(text: String) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == "abonelik")
+    }
+
+    @Test("Bilinmeyen işyeri tahmin edilmez", arguments: ["IYZICO/ABC", "XYZ LTD STI", "PAYTR*KUZEY"])
+    func unknown(text: String) {
         #expect(MerchantCategorizer.suggestedSeedKey(for: text) == nil)
     }
 }
