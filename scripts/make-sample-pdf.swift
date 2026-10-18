@@ -12,6 +12,8 @@ let rows: [(date: String, text: String, installment: String, bonus: String, amou
     ("08.10.2026", "NETFLIX.COM", "", "0,00", "229,99"),
     ("10.10.2026", "OPET PETROLCULUK", "", "5,00", "2.050,00"),
     ("11.10.2026", "ABC TEKSTIL LTD STI", "", "0,00", "640,00"),
+    ("11.10.2026", "IYZICO/AYSE TEYZE EV YEMEKLERI", "", "0,00", "120,00"),
+    ("13.10.2026", "PAYTR*KUZEY PETROL", "", "0,00", "1.480,00"),
     ("12.10.2026", "ÖDEMENİZ İÇİN TEŞEKKÜR EDERİZ", "", "", "-15.000,00"),
     ("14.10.2026", "ZARA IADE", "", "", "-299,90"),
 ]

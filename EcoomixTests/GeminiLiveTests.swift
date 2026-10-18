@@ -47,4 +47,25 @@ struct GeminiLiveTests {
             print("GEMINI_CANLI_ONERI: [\(item.priority)] \(item.title) — ayda ~\(Int(item.estimatedMonthlySaving)) TL")
         }
     }
+
+    @Test("Kategori belirleme gerçek istekle çalışır")
+    func categorize() async throws {
+        let key = try #require(ProcessInfo.processInfo.environment["GEMINI_LIVE_KEY"])
+        let f = Fixture()
+        let names = ["Market", "Yemek & Kafe", "Ulaşım & Yakıt", "Giyim", "Elektronik", "Diğer"]
+        let categories = names.map { name -> EntryCategory in
+            let category = EntryCategory(name: name, icon: "tag", colorHex: "#000", kind: .expense)
+            f.context.insert(category)
+            return category
+        }
+        let merchants = ["IYZICO/AYSE TEYZE EV YEMEKLERI", "OZDILEK AVM ISTANBUL", "KADIKOY ESNAF KAHVECISI",
+                         "PAYTR*KUZEY PETROL", "ABC LTD STI"]
+        let mapping = try await GeminiCategorizer(apiKey: key).categorize(merchants: merchants, categories: categories)
+        for merchant in merchants {
+            print("GEMINI_CANLI_KATEGORI: \(merchant) → \(mapping[merchant]?.name ?? "(boş)")")
+        }
+        #expect(mapping["IYZICO/AYSE TEYZE EV YEMEKLERI"]?.name == "Yemek & Kafe")
+        #expect(mapping["PAYTR*KUZEY PETROL"]?.name == "Ulaşım & Yakıt")
+        #expect(mapping.values.allSatisfy { names.contains($0.name) })
+    }
 }

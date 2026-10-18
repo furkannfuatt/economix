@@ -191,3 +191,61 @@ struct MerchantCategorizerTests {
         #expect(MerchantCategorizer.suggestedSeedKey(for: "ABC LTD STI") == nil)
     }
 }
+
+@Suite("Marka anahtarı")
+struct BrandKeyTests {
+    @Test("Şube, şehir, şirket eki ve ödeme aracısı ayıklanır", arguments: [
+        ("MIGROS SANAL MARKET ISTANBUL TR", "MIGROS"),
+        ("Migros Kadıköy", "MIGROS"),
+        ("IYZICO/TRENDYOL", "TRENDYOL"),
+        ("PAYPAL *STEAM GAMES", "STEAM"),
+        ("A101 MAGAZALARI 1234", "A101"),
+        ("YEMEKSEPETI.COM", "YEMEKSEPETI"),
+        ("ŞOK MARKETLER TİC. A.Ş.", "SOK"),
+        ("PAYTR*ABC TEKSTIL LTD STI", "ABC TEKSTIL"),
+    ])
+    func brandKey(text: String, expected: String) {
+        #expect(MerchantNormalizer.brandKey(text) == expected)
+    }
+
+    @Test("Boş ya da yalnızca ek içeren metin boş anahtar verir")
+    func empty() {
+        #expect(MerchantNormalizer.brandKey("  ") == "")
+        #expect(MerchantNormalizer.brandKey("LTD STI") == "")
+    }
+}
+
+@Suite("Genişletilmiş kategori sözlüğü")
+struct ExtendedCategorizerTests {
+    @Test("Genel kelime kökleri tanınır", arguments: [
+        ("AYDIN PASTANESI", "yemek"),
+        ("KASAP ALI", "market"),
+        ("YILDIZ MANAV", "market"),
+        ("ABC TEKSTIL LTD STI", "giyim"),
+        ("OZ KIRTASIYE", "egitim"),
+        ("MERKEZ OTOPARKI", "ulasim"),
+        ("SELIN KUAFOR", "bakim"),
+        ("CINAR ECZANESI", "saglik"),
+        ("GUNES MOBILYA", "ev"),
+        ("ILHAN FIRINI", "yemek"),
+    ])
+    func genericStems(text: String, key: String) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == key)
+    }
+
+    @Test("Yaygın zincirler", arguments: [
+        ("FILE MARKET", "market"), ("HAKMAR EXPRESS", "market"), ("GETIR", "market"),
+        ("POPEYES ATASEHIR", "yemek"), ("SIMIT SARAYI", "yemek"), ("TAVUK DUNYASI", "yemek"),
+        ("PETROL OFISI", "ulasim"), ("BITAKSI", "ulasim"), ("TURKCELL FATURA", "fatura"),
+        ("WATSONS", "bakim"), ("GRATIS", "bakim"), ("DECATHLON", "giyim"), ("KOCTAS", "ev"),
+        ("TEKNOSA", "elektronik"), ("PEGASUS", "seyahat"), ("BILETIX", "eglence"),
+    ])
+    func chains(text: String, key: String) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == key)
+    }
+
+    @Test("Belirsiz pazaryerleri hâlâ tahmin edilmez", arguments: ["TRENDYOL", "HEPSIBURADA", "AMAZON", "N11"])
+    func ambiguous(text: String) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == nil)
+    }
+}

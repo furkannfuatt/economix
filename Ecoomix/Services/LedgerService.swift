@@ -135,12 +135,17 @@ struct LedgerService {
         try context.save()
     }
 
-    /// Daha önce öğrenilmiş kategori.
+    /// Daha önce öğrenilmiş kategori: önce birebir işyeri, yoksa aynı marka (başka şube/şehir yazımı).
     func learnedCategory(for merchant: String) -> EntryCategory? {
         let pattern = MerchantNormalizer.normalize(merchant)
         guard !pattern.isEmpty else { return nil }
-        let descriptor = FetchDescriptor<MerchantRule>(predicate: #Predicate { $0.pattern == pattern })
-        return (try? context.fetch(descriptor))?.first?.category
+        let exact = FetchDescriptor<MerchantRule>(predicate: #Predicate { $0.pattern == pattern })
+        if let category = (try? context.fetch(exact))?.first?.category { return category }
+
+        let brand = MerchantNormalizer.brandKey(merchant)
+        guard !brand.isEmpty else { return nil }
+        let rules = (try? context.fetch(FetchDescriptor<MerchantRule>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)]))) ?? []
+        return rules.first { MerchantNormalizer.brandKey($0.pattern) == brand }?.category
     }
 
     private func notifyExpenseChange(_ entry: LedgerEntry) {

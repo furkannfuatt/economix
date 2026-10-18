@@ -57,6 +57,27 @@ public struct TxSnapshot: Hashable, Sendable {
 }
 
 public enum MerchantNormalizer {
+    /// Ödeme aracısı önekleri ("IYZICO/TRENDYOL", "PAYPAL *STEAM").
+    static let paymentProcessors: Set<String> = ["IYZICO", "IYZ", "PAYTR", "PAYPAL", "PARAM", "SIPAY", "CRAFTGATE", "PAPARA"]
+    /// Marka sayılmayan ekler: şirket türü, şube/mağaza, şehir, alan adı.
+    static let noiseWords: Set<String> = [
+        "TR", "TUR", "TURKEY", "TURKIYE", "ISTANBUL", "ANKARA", "IZMIR", "BURSA", "ANTALYA", "KOCAELI", "ADANA",
+        "KADIKOY", "BESIKTAS", "SISLI", "USKUDAR", "ATASEHIR", "MALTEPE", "BAKIRKOY",
+        "A", "S", "AS", "LTD", "STI", "SIRKETI", "SAN", "TIC", "VE", "COM", "WWW", "NET", "ONLINE", "INTERNET",
+        "SANAL", "POS", "SUBE", "SUBESI", "MAGAZA", "MAGAZASI", "MAGAZALARI", "MAGAZACILIK", "MARKETLER",
+    ]
+
+    /// İşyerinin marka anahtarı: "MIGROS SANAL MARKET ISTANBUL TR" → "MIGROS", "PAYTR*ABC TEKSTIL LTD STI" → "ABC TEKSTIL".
+    /// Kısa (≤3 harf) ilk kelimeye bir sonraki kelime eklenir.
+    public static func brandKey(_ text: String) -> String {
+        var words = normalize(text).split(separator: " ").map(String.init)
+        while let first = words.first, paymentProcessors.contains(first) { words.removeFirst() }
+        words.removeAll { noiseWords.contains($0) }
+        guard let first = words.first else { return "" }
+        if first.count <= 3, words.count > 1 { return first + " " + words[1] }
+        return first
+    }
+
     /// "Migros  Kadıköy 34" → "MIGROS KADIKOY". Türkçe karakterler katlanır, yalnızca rakamdan oluşan parçalar atılır.
     public static func normalize(_ text: String) -> String {
         let folded = text

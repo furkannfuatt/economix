@@ -22,6 +22,9 @@ struct ImportView: View {
     @State private var error: String?
     /// PDF okunduğunda paylaşılabilecek gizlenmiş biçim örneği (okuma sorunlarını gidermek için).
     @State private var structureSample: String?
+    @State private var categorizing = false
+    @State private var categoryMessage: String?
+    @State private var categoryError: String?
 
     private static let types: [UTType] = [.pdf, .commaSeparatedText, .tabSeparatedText, .plainText,
                                           UTType(filenameExtension: "xlsx"), UTType(filenameExtension: "xls")]
@@ -123,6 +126,8 @@ struct ImportView: View {
                      : "Para çıkışları negatif, girişler pozitif olarak algılandı.")
             }
 
+            categorySection
+
             if structureSample != nil {
                 Section {
                     structureShareLink
@@ -166,13 +171,87 @@ struct ImportView: View {
             Section {
                 let expenseCategories = categories.filter { $0.kind == .expense }
                 ForEach(indices, id: \.self) { index in
-                    CandidateRow(candidate: $candidates[index], categories: expenseCategories)
+                    CandidateRow(candidate: $candidates[index], categories: expenseCategories) { category in
+                        let others = ImportCandidate.applyCategory(category, at: index, in: &candidates)
+                        categoryMessage = others > 0
+                            ? "\(category?.name ?? "Kategori") aynı işyerinin \(others) satırına daha uygulandı." : nil
+                    }
                 }
             } header: {
                 Text("\(title) (\(indices.count))")
             } footer: {
                 if let footer { Text(footer) }
             }
+        }
+    }
+
+    /// Kategorisiz gider satırları için toplu belirleme.
+    @ViewBuilder
+    private var categorySection: some View {
+        let uncategorized = candidates.filter { $0.include && $0.row.kind == .expense && $0.category == nil }
+        if !uncategorized.isEmpty || categoryMessage != nil {
+            Section {
+                if let categoryError {
+                    Text(categoryError).font(.footnote).foregroundStyle(.red)
+                }
+                if let categoryMessage {
+                    Label(categoryMessage, systemImage: "checkmark.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(ChartPalette.single)
+                }
+                if !uncategorized.isEmpty {
+                    if GeminiKeyProvider.current != nil {
+                        Button {
+                            Task { await categorizeWithGemini() }
+                        } label: {
+                            HStack {
+                                Label(categorizing ? "Gemini belirliyor…" : "Kategorisiz \(uncategorized.count) satırı Gemini ile belirle",
+                                      systemImage: "sparkles")
+                                Spacer()
+                                if categorizing { ProgressView() }
+                            }
+                        }
+                        .disabled(categorizing)
+                    } else {
+                        NavigationLink {
+                            AISettingsView()
+                        } label: {
+                            Label("Otomatik belirleme için Gemini anahtarı ekle", systemImage: "key.fill")
+                        }
+                    }
+                }
+            } header: {
+                Text("Kategoriler")
+            } footer: {
+                Text("Bir satıra kategori seçince aynı işyerinin diğer satırları da alır; seçimlerin öğrenilir ve sonraki ekstrelerde otomatik gelir. Gemini'ye yalnızca işyeri adları ve kategori adların gönderilir; tutar ve tarih gönderilmez. Bir dakika kadar sürebilir.")
+            }
+        }
+    }
+
+    private func categorizeWithGemini() async {
+        guard let key = GeminiKeyProvider.current else { return }
+        categorizing = true
+        categoryError = nil
+        defer { categorizing = false }
+        let targets = candidates.indices.filter {
+            candidates[$0].include && candidates[$0].row.kind == .expense && candidates[$0].category == nil
+        }
+        let expenseCategories = categories.filter { $0.kind == .expense }
+        do {
+            let mapping = try await GeminiCategorizer(apiKey: key)
+                .categorize(merchants: targets.map { candidates[$0].row.description }, categories: expenseCategories)
+            var assigned = 0
+            for index in targets {
+                if let category = mapping[candidates[index].row.description] {
+                    candidates[index].category = category
+                    assigned += 1
+                }
+            }
+            let missing = targets.count - assigned
+            categoryMessage = "Gemini \(assigned) satıra kategori atadı" + (missing > 0 ? "; \(missing) satırı sen seç." : ".")
+        } catch {
+            categoryMessage = nil
+            categoryError = error.localizedDescription
         }
     }
 
@@ -280,6 +359,7 @@ struct ImportView: View {
 private struct CandidateRow: View {
     @Binding var candidate: ImportCandidate
     let categories: [EntryCategory]
+    let onSelectCategory: (EntryCategory?) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -309,9 +389,9 @@ private struct CandidateRow: View {
                 }
                 if candidate.row.kind == .expense {
                     Menu {
-                        Button("Kategorisiz") { candidate.category = nil }
+                        Button("Kategorisiz") { onSelectCategory(nil) }
                         ForEach(categories) { category in
-                            Button(category.name, systemImage: category.icon) { candidate.category = category }
+                            Button(category.name, systemImage: category.icon) { onSelectCategory(category) }
                         }
                     } label: {
                         HStack(spacing: 4) {

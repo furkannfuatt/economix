@@ -31,6 +31,22 @@ struct ImportCandidate: Identifiable {
     var amountDifference: Money?
 
     var id: Int { row.lineNumber }
+
+    /// Seçilen kategoriyi satıra ve aynı markanın kategorisiz gider satırlarına uygular; kaç satırın daha güncellendiğini döner.
+    @discardableResult
+    static func applyCategory(_ category: EntryCategory?, at index: Int, in candidates: inout [ImportCandidate]) -> Int {
+        candidates[index].category = category
+        let brand = MerchantNormalizer.brandKey(candidates[index].row.description)
+        guard category != nil, !brand.isEmpty else { return 0 }
+        var updated = 0
+        for other in candidates.indices where other != index && candidates[other].category == nil
+            && candidates[other].row.kind == .expense
+            && MerchantNormalizer.brandKey(candidates[other].row.description) == brand {
+            candidates[other].category = category
+            updated += 1
+        }
+        return updated
+    }
 }
 
 struct ImportSummary {

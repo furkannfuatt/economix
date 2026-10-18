@@ -24,7 +24,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 | `make generate` | `project.yml`'dan `Ecoomix.xcodeproj` üretir (proje dosyası git'te tutulmaz) |
 | `make core-test` | Saf iş mantığı testleri (`Packages/EcoomixCore`, macOS'ta saniyeler sürer) |
 | `make test` | SwiftData entegrasyon testleri (simülatör) |
-| `make gemini-live` | Uygulamanın gerçek Gemini isteğini `Config/Secrets.xcconfig`'teki anahtarla dener |
+| `make gemini-live` | Uygulamanın gerçek Gemini isteklerini (analiz ve kategori) `Config/Secrets.xcconfig`'teki anahtarla dener |
 | `scripts/check-gemini.sh` | Anahtarı ve istek biçimini küçük bir istekle hızlıca dener (anahtar yazdırılmaz) |
 | `make demo` | Simülatörde 12 aylık demo veriyle açar (ayrı yerel dosya, iCloud'a gitmez) |
 | `make screens` | Demo veriyle ekranları gezip `build/screens/` altına görüntü kaydeder |
@@ -57,6 +57,14 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
    - Her elle girdiğin kayıt en fazla bir ekstre satırıyla eşleşir; önce tam tutar, sonra en küçük fark aranır. Her satırın altında hangi kaydınla eşleştiği yazar.
    - "TAKSİT 3/6" gibi satırlar mevcut plana bağlanır. Plan yoksa alım tarihi geriye hesaplanarak yeni plan oluşturulur.
    - Karta yapılan ödemeler varsayılan olarak kapalıdır; iadeler gelir olarak eklenir.
+
+**Kategoriler** şu sırayla belirlenir:
+1. Senin daha önceki seçimlerin. Aynı markanın başka şube ya da şehir yazımı da tanınır ("MIGROS KADIKÖY" için seçtiğin kategori "MIGROS SANAL MARKET İSTANBUL"a da gelir).
+2. Yaygın Türk zincirleri ve "PASTANESİ, KASAP, ECZANESİ, OTOPARKI, KIRTASİYE" gibi genel kelimeler.
+3. Önizlemede bir satıra kategori seçince, aynı işyerinin kategorisiz diğer satırları da onu alır.
+4. Kalan kategorisiz satırlar için **Gemini ile belirle** düğmesi. Gemini'ye yalnızca işyeri adları ve kategori adların gider; tutar ve tarih gitmez. Gemini emin değilse satırı boş bırakır.
+
+İçe aktarılan her kategori seçimi öğrenilir; sonraki ekstrelerde otomatik gelir.
 
 **Banka kartı (debit):** Ayarlar > Hesaplar ve kartlar > + menüsünde her banka için kredi kartı ve banka kartı şablonu var. Banka kartı harcamaları vadesiz hesap dökümünde görünür. Bu dökümü içe aktarırken bir banka hesabı ya da banka kartı seç; eşleştirme tüm banka hesaplarına ve banka kartlarına elle girdiğin kayıtlara bakar. Kredi kartı ekstresi ise yalnızca o kartın kayıtlarıyla karşılaştırılır.
 
