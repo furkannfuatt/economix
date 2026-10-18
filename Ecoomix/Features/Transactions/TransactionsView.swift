@@ -10,11 +10,11 @@ struct EntryFilter: Equatable {
 
     var isActive: Bool { kind != nil || categoryID != nil || accountID != nil || month != nil }
 
-    func matches(_ entry: LedgerEntry, search: String) -> Bool {
+    func matches(_ entry: LedgerEntry, search: String, rule: MonthRule = .calendarMonths) -> Bool {
         if let kind, entry.kind != kind { return false }
         if let categoryID, entry.category?.id != categoryID { return false }
         if let accountID, entry.account?.id != accountID, entry.toAccount?.id != accountID { return false }
-        if let month, !month.contains(entry.date) { return false }
+        if let month, !rule.period(of: month).contains(entry.date) { return false }
         guard !search.isEmpty else { return true }
         let haystack = [entry.merchant, entry.note, entry.category?.name ?? "", entry.installmentPlan?.title ?? ""]
             .joined(separator: " ")
@@ -28,6 +28,7 @@ struct TransactionsView: View {
     @Query(sort: \EntryCategory.sortOrder) private var categories: [EntryCategory]
     @Query(sort: \Account.sortOrder) private var accounts: [Account]
 
+    @AppStorage(MonthSettings.key) private var monthStartDay = 1
     @State private var search = ""
     @State private var filter = EntryFilter()
     @State private var showPlanned = false
@@ -47,7 +48,7 @@ struct TransactionsView: View {
     }
 
     private var filtered: [LedgerEntry] {
-        entries.filter { filter.matches($0, search: search) }
+        entries.filter { filter.matches($0, search: search, rule: MonthRule(startDay: monthStartDay)) }
     }
 
     private var planned: [LedgerEntry] {
@@ -179,7 +180,7 @@ struct TransactionsView: View {
     }
 
     private var recentMonths: [YearMonth] {
-        let current = YearMonth.current()
+        let current = MonthRule(startDay: monthStartDay).current()
         return (0..<24).map { current.adding(months: -$0) }
     }
 }

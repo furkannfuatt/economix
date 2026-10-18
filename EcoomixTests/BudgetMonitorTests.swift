@@ -47,6 +47,20 @@ struct BudgetMonitorTests {
         #expect(notifier.sent.last?.title == "Market bütçesi aşıldı")
     }
 
+    @Test("Bütçe ayı 23'ünde başlıyorsa harcama o dönemden sayılır")
+    func customMonthStart() throws {
+        defaults.set(23, forKey: MonthSettings.key)
+        let (monitor, category, service) = setUp()
+        // 20 Ekim önceki döneme (23 Eyl–22 Eki) ait; 25 Ekim yeni dönemin (23 Eki–22 Kas) ilk günlerinden.
+        try service.addEntry(amount: Money(minor: 700_00), kind: .expense, date: d(2026, 10, 20), category: category, account: nil)
+        try service.addEntry(amount: Money(minor: 300_00), kind: .expense, date: d(2026, 10, 25), category: category, account: nil)
+        #expect(monitor.check(category: category, date: d(2026, 10, 25), asOf: d(2026, 10, 26)).isEmpty)
+        try service.addEntry(amount: Money(minor: 550_00), kind: .expense, date: d(2026, 11, 20), category: category, account: nil)
+        #expect(monitor.check(category: category, date: d(2026, 11, 20), asOf: d(2026, 11, 20)) == [0.8])
+        #expect(monitor.check(category: category, date: d(2026, 10, 20), asOf: d(2026, 11, 20)).isEmpty,
+                "Önceki dönemin harcaması bildirim üretmez")
+    }
+
     @Test("Geçmiş aya eklenen işlem bildirim üretmez")
     func pastMonth() throws {
         let (monitor, category, service) = setUp()

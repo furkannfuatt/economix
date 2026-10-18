@@ -65,8 +65,8 @@ public enum InsightThresholds {
 
 /// Kural tabanlı, çevrimdışı tasarruf önerileri.
 public enum SavingsAnalyzer {
-    public static func analyze(_ input: AnalysisInput, calendar: Calendar = FinanceCalendar.calendar) -> [Insight] {
-        let context = Context(input: input, calendar: calendar)
+    public static func analyze(_ input: AnalysisInput, rule: MonthRule = .calendarMonths) -> [Insight] {
+        let context = Context(input: input, rule: rule)
         let insights = budgetPace(context) + categoryIncrease(context) + subscriptionInsights(context)
             + installmentInsights(context) + smallFrequent(context) + savingsRate(context)
         return insights.sorted {
@@ -77,15 +77,17 @@ public enum SavingsAnalyzer {
 
     private struct Context {
         let input: AnalysisInput
+        let rule: MonthRule
         let calendar: Calendar
         let currentMonth: YearMonth
         let lastMonth: YearMonth
         let expenses: [TxSnapshot]
 
-        init(input: AnalysisInput, calendar: Calendar) {
+        init(input: AnalysisInput, rule: MonthRule) {
             self.input = input
-            self.calendar = calendar
-            currentMonth = YearMonth(date: input.asOf, calendar: calendar)
+            self.rule = rule
+            calendar = rule.calendar
+            currentMonth = rule.month(containing: input.asOf)
             lastMonth = currentMonth.adding(months: -1)
             expenses = input.transactions.filter { $0.kind == .expense && $0.date <= input.asOf }
         }
@@ -95,7 +97,7 @@ public enum SavingsAnalyzer {
         }
 
         func spent(_ categoryID: String?, in month: YearMonth) -> Money {
-            expenses.filter { $0.categoryID == categoryID && month.contains($0.date, calendar: calendar) }
+            expenses.filter { $0.categoryID == categoryID && rule.period(of: month).contains($0.date) }
                 .map(\.amount).sum()
         }
 
@@ -103,7 +105,7 @@ public enum SavingsAnalyzer {
         var averageIncome: Money {
             let months = (1...3).map { currentMonth.adding(months: -$0) }
             let total = input.transactions
-                .filter { tx in tx.kind == .income && months.contains { $0.contains(tx.date, calendar: calendar) } }
+                .filter { tx in tx.kind == .income && months.contains { rule.period(of: $0).contains(tx.date) } }
                 .map(\.amount).sum()
             return total.scaled(numerator: 1, denominator: 3)
         }
@@ -116,7 +118,7 @@ public enum SavingsAnalyzer {
             guard limit.minor > 0 else { return nil }
             let spent = c.spent(categoryID, in: c.currentMonth)
             let status = BudgetEvaluator.evaluate(limit: limit, spent: spent, month: c.currentMonth,
-                                                  asOf: c.input.asOf, calendar: c.calendar)
+                                                  asOf: c.input.asOf, rule: c.rule)
             let name = c.name(categoryID)
             if status.level == .exceeded {
                 return Insight(id: "budget-\(categoryID)", kind: .budgetPace, severity: .critical,
@@ -125,8 +127,8 @@ public enum SavingsAnalyzer {
                                estimatedMonthlySaving: spent - limit, categoryID: categoryID)
             }
             guard status.projectedLevel == .exceeded else { return nil }
-            let elapsed = c.calendar.component(.day, from: c.input.asOf)
-            let remainingDays = max(c.currentMonth.dayCount(calendar: c.calendar) - elapsed, 1)
+            let elapsed = c.rule.elapsedDays(in: c.currentMonth, asOf: c.input.asOf)
+            let remainingDays = max(c.rule.dayCount(of: c.currentMonth) - elapsed, 1)
             let daily = status.remaining.scaled(numerator: 1, denominator: remainingDays)
             return Insight(id: "budget-\(categoryID)", kind: .budgetPace, severity: .warning,
                            title: "\(name) bütçesi aşılabilir",
@@ -235,7 +237,7 @@ public enum SavingsAnalyzer {
     }
 
     private static func savingsRate(_ c: Context) -> [Insight] {
-        let summary = ReportBuilder.summary(c.input.transactions, in: DatePeriod(month: c.lastMonth, calendar: c.calendar))
+        let summary = ReportBuilder.summary(c.input.transactions, in: c.rule.period(of: c.lastMonth))
         guard let rate = summary.savingsRate else { return [] }
         let when = c.lastMonth.locativeName
         if rate < 0 {

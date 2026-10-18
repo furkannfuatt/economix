@@ -84,9 +84,12 @@ enum NotificationScheduler {
         }
 
         if NotificationPreferences.isEnabled(NotificationPreferences.monthlyKey) {
-            let nextMonth = YearMonth(date: now).adding(months: 1)
-            let date = calendar.date(byAdding: .hour, value: 10, to: nextMonth.start)!
-            requests.append(("\(prefix)monthly-\(nextMonth)", date, "\(YearMonth(date: now).monthName) özeti hazır",
+            // Bütçe ayı bitince, yeni dönemin ilk günü 10:00'da.
+            let rule = MonthSettings.rule()
+            let current = rule.month(containing: now)
+            let nextMonth = current.adding(months: 1)
+            let date = calendar.date(byAdding: .hour, value: 10, to: rule.start(of: nextMonth))!
+            requests.append(("\(prefix)monthly-\(nextMonth)", date, "\(current.monthName) özeti hazır",
                              "Geçen ay ne harcadığına ve önerilere göz at."))
         }
 

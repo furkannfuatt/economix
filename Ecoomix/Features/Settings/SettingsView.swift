@@ -1,8 +1,21 @@
 import SwiftUI
 import SwiftData
+import EcoomixCore
 
 struct SettingsView: View {
     @AppStorage(AppLock.enabledKey) private var appLockEnabled = false
+    @AppStorage(MonthSettings.key) private var monthStartDay = 1
+
+    private var monthFooter: String {
+        let rule = MonthRule(startDay: monthStartDay)
+        let current = rule.current()
+        var text = "Özet, raporlar, bütçeler, tasarruf önerileri ve Gemini analizi ayları buna göre keser. "
+        if !rule.isCalendarMonth {
+            text += "Şu anki dönem: \(rule.rangeTitle(of: current)) (\(current.monthName)). "
+                + "Dönem, günlerinin çoğunun düştüğü ayın adını alır. "
+        }
+        return text + "Kart hesap kesimi, taksit ve abonelik tarihleri değişmez."
+    }
 
     var body: some View {
         NavigationStack {
@@ -23,6 +36,21 @@ struct SettingsView: View {
                     } label: {
                         Label("Ekstre içe aktar", systemImage: "square.and.arrow.down.fill")
                     }
+                }
+
+                Section {
+                    Picker(selection: $monthStartDay) {
+                        ForEach(1...31, id: \.self) { day in
+                            Text(day == 1 ? "Her ayın 1'i (takvim ayı)" : "Her ayın \(MonthRule(startDay: day).startDayTitle)")
+                                .tag(day)
+                        }
+                    } label: {
+                        Label("Ay başlangıcı", systemImage: "calendar.badge.clock")
+                    }
+                } header: {
+                    Text("Bütçe ayı")
+                } footer: {
+                    Text(monthFooter)
                 }
 
                 Section("Analiz ve uyarılar") {

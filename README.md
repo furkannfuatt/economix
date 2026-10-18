@@ -7,6 +7,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 - **Raporlar:** 1/3/6/12 aylık gelir-gider, tasarruf oranı, kategori trendi, en çok harcanan yerler. Taksitler için iki görünüm var: "Aylık yük" (taksitler aylara yayılır) ve "Satın alma" (alım ayında tek tutar).
 - **Ödemeler:** taksit planları ve önümüzdeki 12 ayın yükü, abonelikler ve düzenli ödemeler, kart ekstre durumu
 - **Bildirimler:** bütçe %80/%100, kart son ödeme, abonelik yenileme, aylık özet
+- **Bütçe ayı:** Ayarlar > Bütçe ayı'ndan ayın başlangıç günü seçilir (ör. maaş günü 23 → 23 Ekim–22 Kasım). Özet, raporlar, bütçeler, tasarruf önerileri, Gemini analizi ve aylık özet bildirimi bu dönemlere göre hesaplanır. Dönem, günlerinin çoğunun düştüğü ayın adını alır (23 Ekim–22 Kasım → Kasım). Kart hesap kesimi, taksit ve abonelik tarihleri takvim günüyle kalır.
 - **Ekstre içe aktarma:** PDF, Excel (.xlsx) ve CSV. Garanti BBVA, Yapı Kredi ve Akbank profilleri; kolonlar tanınmazsa elle eşleme
 - **Yapay zekâ analizi (isteğe bağlı):** Google Gemini ile kişisel tasarruf önerileri
 - **Face ID kilidi, CSV dışa aktarma**

@@ -20,11 +20,13 @@ final class BudgetMonitor {
     func check(category: EntryCategory, date: Date, asOf now: Date = .now) -> [Double] {
         guard NotificationPreferences.isEnabled(NotificationPreferences.budgetKey, in: defaults),
               let limit = category.monthlyLimit, limit.minor > 0 else { return [] }
-        let month = YearMonth(date: now)
-        guard month.contains(date) else { return [] }
+        let rule = MonthSettings.rule(defaults)
+        let month = rule.month(containing: now)
+        let period = rule.period(of: month)
+        guard period.contains(date) else { return [] }
 
         let spent = (category.entries ?? [])
-            .filter { $0.kind == .expense && month.contains($0.date) && $0.date <= now }
+            .filter { $0.kind == .expense && period.contains($0.date) && $0.date <= now }
             .map(\.amount).sum()
         let ratio = spent.ratio(of: limit)
 

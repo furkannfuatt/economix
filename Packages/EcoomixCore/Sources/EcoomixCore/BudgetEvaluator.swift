@@ -29,11 +29,11 @@ public enum BudgetEvaluator {
     public static let exceededThreshold = 1.0
 
     public static func evaluate(limit: Money, spent: Money, month: YearMonth, asOf date: Date,
-                                calendar: Calendar = FinanceCalendar.calendar) -> BudgetStatus {
+                                rule: MonthRule = .calendarMonths) -> BudgetStatus {
         var projected = spent
-        if month.contains(date, calendar: calendar) {
-            let elapsedDays = calendar.component(.day, from: date)
-            projected = spent.scaled(numerator: month.dayCount(calendar: calendar), denominator: elapsedDays)
+        if rule.period(of: month).contains(date) {
+            let elapsedDays = rule.elapsedDays(in: month, asOf: date)
+            projected = spent.scaled(numerator: rule.dayCount(of: month), denominator: elapsedDays)
         }
         return BudgetStatus(limit: limit, spent: spent, projected: projected)
     }

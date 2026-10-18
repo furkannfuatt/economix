@@ -96,10 +96,10 @@ public enum ReportBuilder {
     }
 
     public static func monthlyTotals(_ txs: [TxSnapshot], months: [YearMonth],
-                                     calendar: Calendar = FinanceCalendar.calendar) -> [MonthlyTotals] {
+                                     rule: MonthRule = .calendarMonths) -> [MonthlyTotals] {
         var income: [YearMonth: Money] = [:], expense: [YearMonth: Money] = [:]
         for tx in txs {
-            let month = YearMonth(date: tx.date, calendar: calendar)
+            let month = rule.month(containing: tx.date)
             switch tx.kind {
             case .income: income[month, default: .zero] += tx.amount
             case .expense: expense[month, default: .zero] += tx.amount
@@ -110,10 +110,10 @@ public enum ReportBuilder {
     }
 
     public static func categoryTrend(_ txs: [TxSnapshot], categoryID: String?, months: [YearMonth],
-                                     calendar: Calendar = FinanceCalendar.calendar) -> [MonthAmount] {
+                                     rule: MonthRule = .calendarMonths) -> [MonthAmount] {
         var sums: [YearMonth: Money] = [:]
         for tx in txs where tx.kind == .expense && tx.categoryID == categoryID {
-            sums[YearMonth(date: tx.date, calendar: calendar), default: .zero] += tx.amount
+            sums[rule.month(containing: tx.date), default: .zero] += tx.amount
         }
         return months.map { MonthAmount(month: $0, amount: sums[$0] ?? .zero) }
     }

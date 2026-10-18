@@ -11,13 +11,18 @@ struct DashboardView: View {
     @Query private var recurring: [RecurringItem]
     @Query(filter: #Predicate<Account> { !$0.isArchived }, sort: \Account.sortOrder) private var accounts: [Account]
 
-    @State private var month = YearMonth.current()
+    @AppStorage(MonthSettings.key) private var monthStartDay = 1
+    /// 0: içinde bulunulan dönem, -1: bir önceki…
+    @State private var monthOffset = 0
+
+    private var rule: MonthRule { MonthRule(startDay: monthStartDay) }
+    private var month: YearMonth { rule.current().adding(months: monthOffset) }
 
     var body: some View {
         let data = FinanceSnapshot(entries: entries, categories: categories, plans: plans, recurring: recurring)
-        let period = DatePeriod(month: month)
+        let period = rule.period(of: month)
         let summary = ReportBuilder.summary(data.transactions, in: period)
-        let isCurrent = month == YearMonth.current()
+        let isCurrent = monthOffset == 0
 
         NavigationStack {
             ScrollView {
@@ -38,8 +43,8 @@ struct DashboardView: View {
             .navigationTitle(month.title)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button("Önceki ay", systemImage: "chevron.left") { month = month.adding(months: -1) }
-                    Button("Sonraki ay", systemImage: "chevron.right") { month = month.adding(months: 1) }
+                    Button("Önceki ay", systemImage: "chevron.left") { monthOffset -= 1 }
+                    Button("Sonraki ay", systemImage: "chevron.right") { monthOffset += 1 }
                         .disabled(isCurrent)
                 }
             }
@@ -52,7 +57,9 @@ struct DashboardView: View {
     private func hero(summary: PeriodSummary, isCurrent: Bool) -> some View {
         Card {
             VStack(alignment: .leading, spacing: 4) {
-                Text(isCurrent ? "Bu ay net" : "\(month.monthName) net").font(.subheadline).foregroundStyle(.secondary)
+                Text((isCurrent ? "Bu ay net" : "\(month.monthName) net")
+                     + (rule.isCalendarMonth ? "" : " · \(rule.rangeTitle(of: month))"))
+                    .font(.subheadline).foregroundStyle(.secondary)
                 Text(summary.net.formatted())
                     .font(.system(size: 38, weight: .bold, design: .rounded))
                     .monospacedDigit()
@@ -61,7 +68,7 @@ struct DashboardView: View {
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
                 if let rate = summary.savingsRate {
-                    Text("Gelirinin \(TR.percent(rate))'i kaldı")
+                    Text(rate < 0 ? "Gider geliri \(TR.percent(-rate)) aştı" : "Gelirinin \(TR.percent(rate))'i kaldı")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -85,9 +92,10 @@ struct DashboardView: View {
             Card("Bütçeler") {
                 ForEach(budgeted) { category in
                     let spent = data.transactions
-                        .filter { $0.kind == .expense && $0.categoryID == category.id.uuidString && month.contains($0.date) }
+                        .filter { $0.kind == .expense && $0.categoryID == category.id.uuidString && rule.period(of: month).contains($0.date) }
                         .map(\.amount).sum()
-                    let status = BudgetEvaluator.evaluate(limit: category.monthlyLimit!, spent: spent, month: month, asOf: .now)
+                    let status = BudgetEvaluator.evaluate(limit: category.monthlyLimit!, spent: spent, month: month, asOf: .now,
+                                                          rule: rule)
                     BudgetRow(category: category, status: status)
                 }
             }

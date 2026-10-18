@@ -81,13 +81,14 @@ struct AIAnalysisSection: View {
         let input = AnalysisInput(transactions: data.transactions, asOf: now, budgets: data.budgets,
                                   categoryNames: data.categoryNames, subscriptions: data.subscriptions,
                                   installmentPlans: data.planSchedules)
-        let payload = AIPayloadBuilder.build(from: input, insights: data.insights(asOf: now),
-                                             includeMerchants: includeMerchants)
+        let rule = MonthSettings.rule()
+        let payload = AIPayloadBuilder.build(from: input, insights: data.insights(asOf: now, rule: rule),
+                                             includeMerchants: includeMerchants, rule: rule)
         do {
             let advice = try await GeminiAdvisor(apiKey: key, model: model).analyze(payload: payload)
             let json = String(decoding: try JSONEncoder().encode(advice), as: UTF8.self)
-            let current = YearMonth.current()
-            context.insert(AIAnalysis(periodStart: current.adding(months: -(AIPayloadBuilder.monthCount - 1)).start,
+            let current = rule.current(now: now)
+            context.insert(AIAnalysis(periodStart: rule.start(of: current.adding(months: -(AIPayloadBuilder.monthCount - 1))),
                                       periodEnd: now, model: model, resultJSON: json))
             try context.save()
         } catch {

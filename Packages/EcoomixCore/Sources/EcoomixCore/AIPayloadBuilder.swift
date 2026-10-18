@@ -35,8 +35,10 @@ public struct AIPayload: Codable, Equatable, Sendable {
 
     public let currency: String
     public let today: String
-    /// Cari ay kısmi: ayın kaçıncı günündeyiz.
+    /// Cari ay kısmi: dönemin kaçıncı günündeyiz.
     public let currentMonthDay: Int
+    /// Aylar her ayın bu gününde başlar (1 = takvim ayı); `month` etiketi dönemin çoğunun düştüğü aydır.
+    public let monthStartDay: Int
     public let months: [MonthRow]
     public let categories: [CategoryRow]
     public let subscriptions: [SubscriptionRow]
@@ -49,13 +51,14 @@ public enum AIPayloadBuilder {
     public static let monthCount = 6
 
     public static func build(from input: AnalysisInput, insights: [Insight], includeMerchants: Bool,
-                             calendar: Calendar = FinanceCalendar.calendar) -> AIPayload {
-        let current = YearMonth(date: input.asOf, calendar: calendar)
+                             rule: MonthRule = .calendarMonths) -> AIPayload {
+        let calendar = rule.calendar
+        let current = rule.month(containing: input.asOf)
         let months = (0..<monthCount).map { current.adding(months: -(monthCount - 1) + $0) }
-        let period = DatePeriod(months: months.first!...months.last!, calendar: calendar)
+        let period = rule.period(of: months.first!...months.last!)
         let txs = input.transactions.filter { $0.date <= input.asOf }
 
-        let monthRows = ReportBuilder.monthlyTotals(txs, months: months, calendar: calendar).map { totals in
+        let monthRows = ReportBuilder.monthlyTotals(txs, months: months, rule: rule).map { totals in
             AIPayload.MonthRow(
                 month: totals.month.description,
                 income: totals.income.lira,
@@ -65,7 +68,7 @@ public enum AIPayloadBuilder {
         }
 
         let categoryRows = ReportBuilder.categoryTotals(txs, kind: .expense, in: period).map { total in
-            let trend = ReportBuilder.categoryTrend(txs, categoryID: total.categoryID, months: months, calendar: calendar)
+            let trend = ReportBuilder.categoryTrend(txs, categoryID: total.categoryID, months: months, rule: rule)
             return AIPayload.CategoryRow(
                 name: total.categoryID.flatMap { input.categoryNames[$0] } ?? "Kategorisiz",
                 monthlyBudget: total.categoryID.flatMap { input.budgets[$0] }?.lira,
@@ -74,7 +77,9 @@ public enum AIPayloadBuilder {
             )
         }
 
-        let outlook = InstallmentScheduler.outlook(plans: input.installmentPlans, from: current, monthCount: 6,
+        // Taksitler takvim günüyle düşer; yük takvim aylarına göre verilir.
+        let outlook = InstallmentScheduler.outlook(plans: input.installmentPlans,
+                                                   from: YearMonth(date: input.asOf, calendar: calendar), monthCount: 6,
                                                    calendar: calendar)
 
         let merchants: [AIPayload.MerchantRow]? = includeMerchants
@@ -87,7 +92,8 @@ public enum AIPayloadBuilder {
         return AIPayload(
             currency: "TRY",
             today: String(format: "%04d-%02d-%02d", day.year!, day.month!, day.day!),
-            currentMonthDay: day.day!,
+            currentMonthDay: rule.elapsedDays(in: current, asOf: input.asOf),
+            monthStartDay: rule.startDay,
             months: monthRows,
             categories: categoryRows,
             subscriptions: input.subscriptions.map { .init(title: $0.title, monthly: $0.monthlyAmount.lira) },

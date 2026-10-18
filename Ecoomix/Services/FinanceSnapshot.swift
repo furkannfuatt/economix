@@ -39,10 +39,10 @@ struct FinanceSnapshot {
         return categories.first { $0.id.uuidString == id }
     }
 
-    func insights(asOf date: Date = .now) -> [Insight] {
+    func insights(asOf date: Date = .now, rule: MonthRule = MonthSettings.rule()) -> [Insight] {
         SavingsAnalyzer.analyze(AnalysisInput(transactions: transactions, asOf: date, budgets: budgets,
                                               categoryNames: categoryNames, subscriptions: subscriptions,
-                                              installmentPlans: planSchedules))
+                                              installmentPlans: planSchedules), rule: rule)
     }
 }
 

@@ -22,18 +22,22 @@ struct ReportsView: View {
     @Query(sort: \EntryCategory.sortOrder) private var categories: [EntryCategory]
 
     @AppStorage("reportMode") private var modeRaw = ReportMode.cashFlow.rawValue
+    @AppStorage(MonthSettings.key) private var monthStartDay = 1
     @State private var span: ReportSpan = .half
-    @State private var anchor = YearMonth.current()
+    /// Son ayın içinde bulunulan döneme uzaklığı (0 = bu dönem).
+    @State private var anchorOffset = 0
     @State private var selectedDate: Date?
 
     private var mode: ReportMode { ReportMode(rawValue: modeRaw) ?? .cashFlow }
+    private var rule: MonthRule { MonthRule(startDay: monthStartDay) }
+    private var anchor: YearMonth { rule.current().adding(months: anchorOffset) }
 
     var body: some View {
         let months = (0..<span.rawValue).map { anchor.adding(months: -(span.rawValue - 1) + $0) }
-        let period = DatePeriod(months: months.first!...months.last!)
+        let period = rule.period(of: months.first!...months.last!)
         let txs = ReportBuilder.normalized(entries.map(\.snapshot), mode: mode)
         let summary = ReportBuilder.summary(txs, in: period)
-        let monthly = ReportBuilder.monthlyTotals(txs, months: months)
+        let monthly = ReportBuilder.monthlyTotals(txs, months: months, rule: rule)
 
         NavigationStack {
             ScrollView {
@@ -76,7 +80,7 @@ struct ReportsView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Raporlar")
             .navigationDestination(for: CategoryReportDestination.self) { destination in
-                CategoryReportView(categoryID: destination.categoryID, anchor: anchor, mode: mode)
+                CategoryReportView(categoryID: destination.categoryID, anchor: anchor, mode: mode, rule: rule)
             }
             .toolbar {
                 Menu {
@@ -92,22 +96,24 @@ struct ReportsView: View {
 
     private func periodNavigator(months: [YearMonth]) -> some View {
         HStack {
-            Button("Önceki", systemImage: "chevron.left") { anchor = anchor.adding(months: -span.rawValue) }
+            Button("Önceki", systemImage: "chevron.left") { anchorOffset -= span.rawValue }
                 .labelStyle(.iconOnly)
             Spacer()
             VStack(spacing: 2) {
                 Text(months.count == 1 ? months[0].title : "\(months.first!.shortTitle) \(months.first!.year) – \(months.last!.shortTitle) \(months.last!.year)")
                     .font(.headline)
-                Text(mode == .cashFlow ? "Taksitler aylara yayılmış" : "Taksitli alımlar alım ayında")
+                Text(rule.isCalendarMonth
+                     ? (mode == .cashFlow ? "Taksitler aylara yayılmış" : "Taksitli alımlar alım ayında")
+                     : rule.rangeTitle(of: months.first!...months.last!))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
             Button("Sonraki", systemImage: "chevron.right") {
-                anchor = min(anchor.adding(months: span.rawValue), YearMonth.current())
+                anchorOffset = min(anchorOffset + span.rawValue, 0)
             }
             .labelStyle(.iconOnly)
-            .disabled(anchor >= YearMonth.current())
+            .disabled(anchorOffset >= 0)
         }
         .buttonStyle(.glass)
     }
@@ -117,10 +123,10 @@ struct ReportsView: View {
     private func dailyChart(txs: [TxSnapshot], month: YearMonth) -> some View {
         let calendar = FinanceCalendar.calendar
         var byDay: [Date: Money] = [:]
-        for tx in txs where tx.kind == .expense && month.contains(tx.date) {
+        for tx in txs where tx.kind == .expense && rule.period(of: month).contains(tx.date) {
             byDay[calendar.startOfDay(for: tx.date), default: .zero] += tx.amount
         }
-        let days = (1...month.dayCount).map { month.date(day: $0) }
+        let days = rule.days(of: month)
         let selectedDay = selectedDate.map { calendar.startOfDay(for: $0) }
 
         return Chart(days, id: \.self) { day in
@@ -314,6 +320,7 @@ struct CategoryReportView: View {
     let categoryID: String?
     let anchor: YearMonth
     let mode: ReportMode
+    var rule: MonthRule = .calendarMonths
 
     @Environment(AppRouter.self) private var router
     @Query private var entries: [LedgerEntry]
@@ -324,13 +331,13 @@ struct CategoryReportView: View {
         let category = categories.first { $0.id.uuidString == categoryID }
         let months = (0..<12).map { anchor.adding(months: -11 + $0) }
         let txs = ReportBuilder.normalized(entries.map(\.snapshot), mode: mode)
-        let trend = ReportBuilder.categoryTrend(txs, categoryID: categoryID, months: months)
+        let trend = ReportBuilder.categoryTrend(txs, categoryID: categoryID, months: months, rule: rule)
         let nonZero = trend.filter { $0.amount.minor > 0 }
         let average = nonZero.isEmpty ? Money.zero : nonZero.map(\.amount).sum().scaled(numerator: 1, denominator: nonZero.count)
         let color = Color(hex: category?.colorHex ?? "#8E8E93")
         let selectedMonth = selectedDate.map { YearMonth(date: $0) }
         let monthEntries = entries
-            .filter { $0.kind == .expense && $0.category?.id.uuidString == categoryID && anchor.contains($0.date) }
+            .filter { $0.kind == .expense && $0.category?.id.uuidString == categoryID && rule.period(of: anchor).contains($0.date) }
             .sorted { $0.date > $1.date }
 
         List {
