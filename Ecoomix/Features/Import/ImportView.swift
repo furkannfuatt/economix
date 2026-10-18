@@ -24,7 +24,6 @@ struct ImportView: View {
     @State private var structureSample: String?
     @State private var copiedSample = false
     @State private var readingPDF = false
-    @State private var readByOCR = false
     @State private var categorizing = false
     @State private var categoryMessage: String?
     @State private var categoryError: String?
@@ -144,15 +143,6 @@ struct ImportView: View {
                 Text(result.expensesArePositive
                      ? "Harcamalar pozitif, ödeme ve iadeler negatif olarak algılandı."
                      : "Para çıkışları negatif, girişler pozitif olarak algılandı.")
-            }
-
-            if readByOCR {
-                Section {
-                    Label("Bu PDF'in metni okunamadığı için sayfalar görüntüden okundu (OCR). Tutarları ve tarihleri ekstreyle bir kez karşılaştır.",
-                          systemImage: "text.viewfinder")
-                        .font(.footnote)
-                        .foregroundStyle(.orange)
-                }
             }
 
             categorySection
@@ -302,7 +292,6 @@ struct ImportView: View {
         error = nil
         structureSample = nil
         copiedSample = false
-        readByOCR = false
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         do {
@@ -326,26 +315,19 @@ struct ImportView: View {
         }
     }
 
-    /// Önce PDF'in metin katmanı denenir; işlem satırı çıkmazsa (taranmış ya da eşleme tablosuz yazı tipi)
-    /// sayfalar cihazda görüntüden okunur (OCR).
+    /// Önce PDF'in metin katmanı denenir; işlem satırı çıkmazsa metin harf kodlarından çözülür
+    /// (Akbank'ın ana bilgisayar çıktısı PDF'leri). Görüntüden okuma yapılmaz.
     private func loadPDF(_ data: Data, fileName: String) {
         readingPDF = true
         Task {
-            let outcome = await Task.detached(priority: .userInitiated) { () -> Result<(lines: [String], ocr: Bool), any Error> in
-                let textLines = (try? PDFTextReader.lines(from: data)) ?? []
-                if PDFStatementLines.rows(from: textLines).count > 1 { return .success((textLines, false)) }
-                do {
-                    return .success((try PDFOCRReader.lines(from: data), true))
-                } catch {
-                    return .failure(error)
-                }
+            let outcome = await Task.detached(priority: .userInitiated) { () -> Result<[String], any Error> in
+                Result { try PDFStatementText.lines(from: data) }
             }.value
             readingPDF = false
             switch outcome {
-            case .success(let read):
-                readByOCR = read.ocr
-                structureSample = StatementStructure.masked(lines: read.lines).joined(separator: "\n")
-                parse(rows: PDFStatementLines.rows(from: read.lines), fileName: fileName,
+            case .success(let lines):
+                structureSample = StatementStructure.masked(lines: lines).joined(separator: "\n")
+                parse(rows: PDFStatementLines.rows(from: lines), fileName: fileName,
                       columns: (0, PDFStatementLines.columns))
             case .failure:
                 error = "Bu PDF okunamadı. Bankanın uygulamasından ekstreyi Excel olarak almayı dene."

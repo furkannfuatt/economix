@@ -246,6 +246,16 @@ struct ExtendedCategorizerTests {
         #expect(MerchantCategorizer.suggestedSeedKey(for: text) == key)
     }
 
+    @Test("Taksit yazısı taksi sanılmaz", arguments: [
+        ("HEPSIPAY/HEPSIBU (1,500.00 TL) 3/3.taksit", nil),
+        ("HEPSIBURADA TAKSITLI SATIS", nil),
+        ("SARI TAKSI", "ulasim"),
+        ("TAKSICI MEHMET", "ulasim"),
+    ] as [(String, String?)])
+    func installmentIsNotTaxi(text: String, key: String?) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == key)
+    }
+
     @Test("Belirsiz pazaryerleri hâlâ tahmin edilmez", arguments: ["TRENDYOL", "HEPSIBURADA", "AMAZON", "N11"])
     func ambiguous(text: String) {
         #expect(MerchantCategorizer.suggestedSeedKey(for: text) == nil)

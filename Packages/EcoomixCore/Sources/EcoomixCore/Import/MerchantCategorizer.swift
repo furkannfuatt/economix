@@ -52,6 +52,9 @@ public enum MerchantCategorizer {
         "seyahat": ["OTEL", "HOTEL", "PANSIYON", "HAVAYOLU", "TURIZM"],
     ]
 
+    /// Bir kökle başlayıp başka anlama gelen kelimeler: "TAKSIT" taksi değildir.
+    static let falseStems = ["TAKSIT"]
+
     /// Eşleşen en uzun anahtar kelimenin ya da kelime kökünün kategorisi; eşleşme yoksa nil.
     /// Eşit uzunlukta marka eşleşmesi kökten önce gelir.
     public static func suggestedSeedKey(for merchant: String) -> String? {
@@ -70,7 +73,9 @@ public enum MerchantCategorizer {
             for phrase in phrases where padded.contains(" \(phrase) ") { consider(key, phrase.count, brand: true) }
         }
         for (key, list) in stems {
-            for stem in list where words.contains(where: { $0.hasPrefix(stem) }) { consider(key, stem.count, brand: false) }
+            for stem in list where words.contains(where: { word in
+                word.hasPrefix(stem) && !falseStems.contains { word.hasPrefix($0) }
+            }) { consider(key, stem.count, brand: false) }
         }
         return best?.key
     }

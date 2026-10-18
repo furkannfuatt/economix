@@ -5,7 +5,7 @@ import Testing
 @testable import EcoomixCore
 
 /// Metni verilen konumlara çizen test PDF'i. Sütunlar ayrı ayrı çizildiği için PDF'in metin sırası satır sırası değildir.
-private func makePDF(_ items: [(String, CGFloat, CGFloat)]) -> Data {
+func makePDF(_ items: [(String, CGFloat, CGFloat)]) -> Data {
     let data = NSMutableData()
     var box = CGRect(x: 0, y: 0, width: 595, height: 842)
     let context = CGContext(consumer: CGDataConsumer(data: data as CFMutableData)!, mediaBox: &box, nil)!
@@ -152,54 +152,5 @@ struct AkbankLayoutTests {
     ])
     func installmentStyles(text: String, expected: InstallmentMarker) {
         #expect(StatementParser.installmentMarker(in: text) == expected)
-    }
-
-    @Test("OCR'ın bozduğu ayraçlar düzeltilir", arguments: [("1.234.56", 123_456), ("1,234,56", 123_456), ("12.345.678,90", 1_234_567_890)])
-    func ocrSeparators(text: String, minor: Int) {
-        #expect(Money.parse(text) == Money(minor: minor))
-    }
-}
-
-/// Metni resim olarak içeren PDF: içinden metin çıkarılamaz, yalnızca görüntüden okunabilir.
-private func makeImageOnlyPDF(_ lines: [String]) -> Data {
-    let scale: CGFloat = 3, width: CGFloat = 595, height: CGFloat = 300
-    let bitmap = CGContext(data: nil, width: Int(width * scale), height: Int(height * scale), bitsPerComponent: 8,
-                           bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
-                           bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-    bitmap.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-    bitmap.fill(CGRect(x: 0, y: 0, width: width * scale, height: height * scale))
-    bitmap.scaleBy(x: scale, y: scale)
-    let font = CTFontCreateWithName("Helvetica" as CFString, 12, nil)
-    for (index, line) in lines.enumerated() {
-        let attributed = NSAttributedString(string: line, attributes: [.init(kCTFontAttributeName as String): font])
-        bitmap.textPosition = CGPoint(x: 30, y: height - 40 - CGFloat(index) * 24)
-        CTLineDraw(CTLineCreateWithAttributedString(attributed), bitmap)
-    }
-    let image = bitmap.makeImage()!
-
-    let data = NSMutableData()
-    var box = CGRect(x: 0, y: 0, width: width, height: height)
-    let pdf = CGContext(consumer: CGDataConsumer(data: data as CFMutableData)!, mediaBox: &box, nil)!
-    pdf.beginPDFPage(nil)
-    pdf.draw(image, in: box)
-    pdf.endPDFPage()
-    pdf.closePDF()
-    return data as Data
-}
-
-@Suite("PDF OCR")
-struct PDFOCRTests {
-    @Test("Metin katmanı olmayan PDF görüntüden okunur")
-    func readsImageOnlyPDF() throws {
-        let pdf = makeImageOnlyPDF(["Hesap Kesim Tarihi 18/09/2026",
-                                    "12/09/2026 MIGROS ISTANBUL 1,234.56",
-                                    "14/09/2026 SHELL PETROL 850.00"])
-        #expect((try? PDFTextReader.lines(from: pdf)) == nil, "Metin katmanı olmamalı")
-        let lines = try PDFOCRReader.lines(from: pdf)
-        let rows = Array(PDFStatementLines.rows(from: lines).dropFirst())
-        #expect(rows.count == 2)
-        #expect(rows.first?.first == "12.09.2026")
-        #expect(rows.first?.last == "1,234.56")
-        #expect(rows.last?.last == "850.00")
     }
 }

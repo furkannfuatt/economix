@@ -27,6 +27,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 | `make gemini-live` | Uygulamanın gerçek Gemini isteklerini (analiz ve kategori) `Config/Secrets.xcconfig`'teki anahtarla dener |
 | `scripts/check-gemini.sh` | Anahtarı ve istek biçimini küçük bir istekle hızlıca dener (anahtar yazdırılmaz) |
 | `make demo` | Simülatörde 12 aylık demo veriyle açar (ayrı yerel dosya, iCloud'a gitmez) |
+| `make fixtures` | UI testindeki Akbank düzenli örnek PDF'i (`akbank-ornek.pdf`) yeniden üretir |
 | `make screens` | Demo veriyle ekranları gezip `build/screens/` altına görüntü kaydeder |
 | `make device UDID=…` | Kabloyla bağlı iPhone'a kurar |
 
@@ -70,7 +71,9 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 
 Eski `.xls` biçimi okunamaz. Dosyayı Numbers'ta açıp CSV ya da .xlsx olarak dışa aktar.
 
-**PDF ekstreler:** Tarihle başlayıp tutarla biten satırlar işlem sayılır. Satırlar sayfadaki konuma göre kurulduğu için sütunlu PDF'ler de okunur. Taksit kolonu ("3/6") ve bonus/puan kolonu ayırt edilir. Taranmış (yalnızca görüntü olan) PDF'ler okunamaz. Okumada sorun olursa önizlemedeki **Biçim örneğini paylaş** düğmesi gizlenmiş bir örnek üretir: rakamlar 9'a, harfler X'e döner, yalnızca başlık kelimeleri kalır. Okuyucu bu örnekle bankana göre ayarlanabilir.
+**PDF ekstreler:** Tarihle başlayıp tutarla biten satırlar işlem sayılır. Satırlar sayfadaki konuma göre kurulduğu için sütunlu PDF'ler de okunur. Taksit kolonu ("3/6") ve bonus/puan kolonu ayırt edilir. Taranmış (yalnızca görüntü olan) PDF'ler okunamaz; görüntüden okuma (OCR) bilerek yapılmaz. Okumada sorun olursa önizlemedeki **Biçim örneğini paylaş** düğmesi gizlenmiş bir örnek üretir: rakamlar 9'a, harfler X'e döner, yalnızca başlık kelimeleri kalır. Okuyucu bu örnekle bankana göre ayarlanabilir.
+
+**Akbank (Axess) PDF'leri:** Akbank ekstresi bir IBM ana bilgisayar çıktısıdır. Harfler Type3 bitmap yazı tipleriyle çizilir, kodlar EBCDIC'tir (kod sayfası 1140) ve PDF'te Unicode tablosu yoktur. Bu yüzden PDFKit anlamsız metin verir. Uygulama bu durumda içerik akışını kendisi okur ve kodları EBCDIC tablosuyla çevirir. Tabloda olmayan ı, İ, ş, Ş, ğ ve Ğ harfleri ayrı bir yazı tipinde, belgeye özel kodlarla durur. Bu harfler resimlerinden tanınır: önce gerçek ekstreden öğrenilmiş harf sözlüğüne (`TurkishGlyphs`), yoksa harfin şekline bakılır. ş ile Ş'nin şekli aynıdır, bu yüzden aradaki fark komşu harflerin boyundan anlaşılır.
 
 > Banka profilleri yaygın kolon adlarına göre yazıldı ("Tarih", "İşlem/Açıklama", "Tutar", "Taksit", "Borç/Alacak"). Gerçek bir ekstre düzgün okunmazsa elle eşleme ekranı devreye girer. Kolon düzeni belli olan bir örnek dosyayla profil kesinleştirilebilir (`Packages/EcoomixCore/Tests/EcoomixCoreTests/Fixtures`).
 

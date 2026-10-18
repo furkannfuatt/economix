@@ -18,23 +18,25 @@ final class ImportFlowTests: XCTestCase {
         capture("16-pdf-onizleme-alt")
     }
 
-    /// Metin katmanı olmayan PDF'in cihazda görüntüden (OCR) okunması.
+    /// Akbank'ın ana bilgisayar çıktısı PDF'i: metin EBCDIC kodlu, Türkçe harfler ayrı yazı tipinde; kodlardan çözülür.
     @MainActor
-    func testOCRPDFImport() throws {
-        let file = try XCTUnwrap(ProcessInfo.processInfo.environment["IMPORT_OCR_PDF"])
+    func testAkbankPDFImport() throws {
+        let file = try XCTUnwrap(ProcessInfo.processInfo.environment["IMPORT_AKBANK_PDF"])
         let app = XCUIApplication()
         app.launchArguments = ["-demoData", "-tab", "settings", "-importFile", file]
         app.launch()
 
         app.buttons["Ekstre içe aktar"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["Banka"].waitForExistence(timeout: 30), "OCR önizlemesi açılmadı")
-        let note = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "görüntüden okundu")).firstMatch
-        XCTAssertTrue(note.exists, "OCR notu görünmüyor")
-        capture("19-ocr-onizleme")
+        XCTAssertTrue(app.staticTexts["Banka"].waitForExistence(timeout: 10), "Akbank önizlemesi açılmadı")
+        capture("19-akbank-onizleme")
+        let turkish = app.staticTexts["ŞOK MARKET KADIKÖY"]
+        for _ in 0..<5 where !turkish.exists { app.swipeUp() }
+        XCTAssertTrue(turkish.exists, "Türkçe harfli satır okunamadı")
+        capture("20-akbank-onizleme-alt")
         let installment = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Taksit 2/3")).firstMatch
         for _ in 0..<5 where !installment.exists { app.swipeUp() }
         XCTAssertTrue(installment.exists, "Akbank taksit satırı okunamadı")
-        capture("20-ocr-onizleme-alt")
+        capture("21-akbank-taksit")
     }
 
     /// Gerçek Gemini isteği yapar; yalnızca GEMINI_UI_LIVE=1 ile çalışır.
