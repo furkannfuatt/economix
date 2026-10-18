@@ -22,6 +22,7 @@ struct ImportView: View {
     @State private var error: String?
     /// PDF okunduğunda paylaşılabilecek gizlenmiş biçim örneği (okuma sorunlarını gidermek için).
     @State private var structureSample: String?
+    @State private var copiedSample = false
     @State private var categorizing = false
     @State private var categoryMessage: String?
     @State private var categoryError: String?
@@ -74,7 +75,7 @@ struct ImportView: View {
             } footer: {
                 Text(account?.isCreditCard == false
                      ? "Banka kartı harcamaları vadesiz hesap dökümünde görünür; bankanın hesap hareketleri dökümünü (CSV/.xlsx) seç. Banka hesaplarına ve banka kartlarına elle girdiğin kayıtlar otomatik eşleştirilir."
-                     : "Bankanın internet şubesinden ya da mobil uygulamasından indirdiğin CSV veya Excel (.xlsx) ekstresini seç. Bu karta elle girdiğin kayıtlar otomatik eşleştirilir. Dosya cihazında işlenir, hiçbir yere gönderilmez.")
+                     : "Bankanın uygulamasından ya da internet şubesinden indirdiğin PDF, Excel (.xlsx) veya CSV ekstresini seç. Bu karta elle girdiğin kayıtlar otomatik eşleştirilir. Dosya cihazında işlenir, hiçbir yere gönderilmez.")
             }
 
             Section("Desteklenenler") {
@@ -92,11 +93,22 @@ struct ImportView: View {
                 }
             }
         }
+        // Alttaki "İşlem ekle" çubuğu son satırları örtmesin.
+        .contentMargins(.bottom, 90, for: .scrollContent)
     }
 
     @ViewBuilder
     private var structureShareLink: some View {
         if let structureSample {
+            Button("Biçim örneğini kopyala (gizlenmiş)", systemImage: "doc.on.doc") {
+                UIPasteboard.general.string = structureSample
+                copiedSample = true
+            }
+            if copiedSample {
+                Label("Kopyalandı; sohbete yapıştırabilirsin.", systemImage: "checkmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(ChartPalette.single)
+            }
             ShareLink(item: structureSample, subject: Text("Ecoomix ekstre biçim örneği")) {
                 Label("Biçim örneğini paylaş (gizlenmiş)", systemImage: "square.and.arrow.up")
             }
@@ -272,6 +284,7 @@ struct ImportView: View {
     private func load(_ url: URL) {
         error = nil
         structureSample = nil
+        copiedSample = false
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         do {
