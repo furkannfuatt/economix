@@ -304,6 +304,14 @@ struct ExtendedCategorizerTests {
         #expect(MerchantCategorizer.suggestedSeedKey(for: text) == "abonelik")
     }
 
+    @Test("Aracı kurum ve kripto alımları yatırım sayılır", arguments: [
+        "MIDAS", "MIDAS MENKUL", "BINANCE.COM", "BTCTURK", "PARIBU", "GEDIK YATIRIM MENKUL", "IS YATIRIM",
+        "GARANTI BBVA YATIRIM", "COINBASE", "INTERACTIVE BROKERS",
+    ])
+    func investments(text: String) {
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == "yatirim-gider")
+    }
+
     @Test("Bilinmeyen işyeri tahmin edilmez", arguments: ["IYZICO/ABC", "XYZ LTD STI", "PAYTR*KUZEY"])
     func unknown(text: String) {
         #expect(MerchantCategorizer.suggestedSeedKey(for: text) == nil)

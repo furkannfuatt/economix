@@ -28,8 +28,10 @@ enum SeedService {
         .init(key: "bakim", name: "Kişisel Bakım", icon: "sparkles", color: "#FF9F0A", kind: .expense),
         .init(key: "hediye", name: "Hediye", icon: "gift.fill", color: "#FF375F", kind: .expense),
         .init(key: "seyahat", name: "Seyahat", icon: "airplane", color: "#64D2FF", kind: .expense),
+        .init(key: "yatirim-gider", name: "Yatırım", icon: "chart.line.uptrend.xyaxis", color: "#FFD60A", kind: .expense),
         .init(key: "diger-gider", name: "Diğer", icon: "ellipsis.circle.fill", color: "#8E8E93", kind: .expense),
         .init(key: "maas", name: "Maaş", icon: "banknote.fill", color: "#30A46C", kind: .income),
+        .init(key: "burs", name: "Burs", icon: "graduationcap.fill", color: "#BF5AF2", kind: .income),
         .init(key: "ek-gelir", name: "Ek Gelir", icon: "plus.circle.fill", color: "#32ADE6", kind: .income),
         .init(key: "freelance", name: "Freelance", icon: "laptopcomputer", color: "#5AC8FA", kind: .income),
         .init(key: "yatirim", name: "Yatırım", icon: "chart.line.uptrend.xyaxis", color: "#FFB800", kind: .income),
@@ -56,7 +58,7 @@ enum SeedService {
     }
 
     /// İlk sürümden sonra eklenen varsayılan kategoriler.
-    static let addedLater = ["online"]
+    static let addedLater = ["online", "burs", "yatirim-gider"]
 
     /// Sonradan eklenen varsayılanları mevcut kuruluma bir kez ekler; kullanıcı silerse geri gelmez.
     /// Kurulum yapılmamışsa (hiç varsayılan kategori yoksa) dokunmaz: kurulum hepsini ekler.

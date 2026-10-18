@@ -17,9 +17,21 @@ struct NewDefaultsAndRepairsTests {
         try f.context.fetch(FetchDescriptor<EntryCategory>()).compactMap(\.seedKey)
     }
 
-    @Test("Varsayılanlarda Online Alışveriş var")
-    func onlineSeed() {
-        #expect(SeedService.categories.contains { $0.key == "online" && $0.name == "Online Alışveriş" })
+    @Test("Varsayılanlarda Online Alışveriş, gelirde Burs, giderde Yatırım var")
+    func newSeeds() {
+        #expect(SeedService.categories.contains { $0.key == "online" && $0.name == "Online Alışveriş" && $0.kind == .expense })
+        #expect(SeedService.categories.contains { $0.key == "burs" && $0.name == "Burs" && $0.kind == .income })
+        #expect(SeedService.categories.contains { $0.key == "yatirim-gider" && $0.name == "Yatırım" && $0.kind == .expense })
+        #expect(Set(SeedService.categories.map(\.key)).count == SeedService.categories.count, "Anahtarlar tekil")
+    }
+
+    @Test("Burs ve Yatırım mevcut kuruluma eklenir")
+    func addsScholarshipAndInvestment() throws {
+        f.context.insert(EntryCategory(name: "Market", icon: "cart", colorHex: "#000", kind: .expense, seedKey: "market"))
+        try SeedService.addNewDefaults(in: f.context, defaults: defaults)
+        let categories = try f.context.fetch(FetchDescriptor<EntryCategory>())
+        #expect(categories.contains { $0.seedKey == "burs" && $0.kind == .income })
+        #expect(categories.contains { $0.seedKey == "yatirim-gider" && $0.kind == .expense })
     }
 
     @Test("Sonradan eklenen varsayılan kategori mevcut kuruluma bir kez eklenir")
