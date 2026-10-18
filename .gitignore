@@ -1,0 +1,16 @@
+# Xcode / XcodeGen
+*.xcodeproj
+xcuserdata/
+DerivedData/
+build/
+.build/
+.swiftpm/
+*.xcresult
+
+# macOS
+.DS_Store
+
+# Gizli
+*.mobileprovision
+.env
+Config/Secrets.xcconfig

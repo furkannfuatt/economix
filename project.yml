@@ -1,0 +1,107 @@
+name: Ecoomix
+options:
+  bundleIdPrefix: com.furkanfuat
+  deploymentTarget:
+    iOS: "26.0"
+  developmentLanguage: tr
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: TAKIM_KIMLIGI
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+
+packages:
+  EcoomixCore:
+    path: Packages/EcoomixCore
+
+targets:
+  Ecoomix:
+    type: application
+    platform: iOS
+    configFiles:
+      Debug: Config/Secrets.xcconfig
+      Release: Config/Secrets.xcconfig
+    sources:
+      - Ecoomix
+    dependencies:
+      - package: EcoomixCore
+    entitlements:
+      path: Ecoomix/Ecoomix.entitlements
+      properties:
+        aps-environment: development
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.com.furkanfuat.ecoomix
+        com.apple.developer.icloud-services:
+          - CloudKit
+    info:
+      path: Ecoomix/Info.plist
+      properties:
+        CFBundleDisplayName: Ecoomix
+        CFBundleDevelopmentRegion: tr
+        UILaunchScreen: {}
+        UIBackgroundModes:
+          - remote-notification
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSFaceIDUsageDescription: "Ecoomix'i kilitlemek için Face ID kullanılır."
+        GeminiAPIKey: $(GEMINI_API_KEY)
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.furkanfuat.ecoomix
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_PREVIEWS: YES
+
+  EcoomixTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - EcoomixTests
+    dependencies:
+      - target: Ecoomix
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.furkanfuat.ecoomix.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+  EcoomixUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - EcoomixUITests
+    dependencies:
+      - target: Ecoomix
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.furkanfuat.ecoomix.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Ecoomix
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
+
+schemes:
+  Ecoomix:
+    build:
+      targets:
+        Ecoomix: all
+        EcoomixTests: [test]
+    test:
+      targets:
+        - EcoomixTests
+    run:
+      config: Debug
+  EcoomixScreens:
+    build:
+      targets:
+        Ecoomix: all
+        EcoomixUITests: [test]
+    test:
+      targets:
+        - EcoomixUITests

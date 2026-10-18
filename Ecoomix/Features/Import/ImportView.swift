@@ -1,0 +1,341 @@
+import SwiftUI
+import SwiftData
+import UniformTypeIdentifiers
+import EcoomixCore
+
+struct ImportView: View {
+    private enum Stage {
+        case start
+        case mapping(rows: [[String]], fileName: String)
+        case preview(profile: BankProfile, result: StatementParseResult)
+        case done(ImportSummary)
+    }
+
+    @Environment(\.modelContext) private var context
+    @Query(filter: #Predicate<Account> { !$0.isArchived }, sort: \Account.sortOrder) private var accounts: [Account]
+    @State private var categories: [EntryCategory] = []
+
+    @State private var stage: Stage = .start
+    @State private var account: Account?
+    @State private var showPicker = false
+    @State private var candidates: [ImportCandidate] = []
+    @State private var error: String?
+
+    private static let types: [UTType] = [.commaSeparatedText, .tabSeparatedText, .plainText,
+                                          UTType(filenameExtension: "xlsx"), UTType(filenameExtension: "xls")]
+        .compactMap { $0 }
+
+    var body: some View {
+        Group {
+            switch stage {
+            case .start: startView
+            case .mapping(let rows, let fileName):
+                ColumnMappingView(rows: rows) { header, map in
+                    parse(rows: rows, fileName: fileName, columns: (header, map))
+                }
+            case .preview(let profile, let result): previewView(profile: profile, result: result)
+            case .done(let summary): doneView(summary)
+            }
+        }
+        .navigationTitle("Ekstre içe aktar")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .fileImporter(isPresented: $showPicker, allowedContentTypes: Self.types) { result in
+            switch result {
+            case .success(let url): load(url)
+            case .failure(let failure): error = failure.localizedDescription
+            }
+        }
+        .onAppear {
+            if account == nil { account = accounts.first { $0.isCreditCard } ?? accounts.first }
+            #if DEBUG
+            if let path = UserDefaults.standard.string(forKey: "importFile"), case .start = stage {
+                load(URL(fileURLWithPath: path))
+            }
+            #endif
+        }
+    }
+
+    // MARK: Başlangıç
+
+    private var startView: some View {
+        Form {
+            Section {
+                Picker("Hangi hesaba/karta?", selection: $account) {
+                    ForEach(accounts) { Label($0.name, systemImage: $0.icon).tag(Account?.some($0)) }
+                }
+                Button("Dosya seç", systemImage: "doc.badge.plus") { showPicker = true }
+                    .disabled(account == nil)
+            } footer: {
+                Text("Bankanın internet şubesinden ya da mobil uygulamasından indirdiğin CSV veya Excel (.xlsx) ekstresini seç. Dosya cihazında işlenir, hiçbir yere gönderilmez.")
+            }
+
+            Section("Desteklenenler") {
+                Label("Garanti BBVA (Bonus), Yapı Kredi (World), Akbank (Axess)", systemImage: "building.columns")
+                Label("Kolonları tanınmayan dosyalar için elle eşleme", systemImage: "tablecells")
+                Label("Taksitler plana bağlanır, aynı satır iki kez eklenmez", systemImage: "checkmark.shield")
+            }
+            .font(.subheadline)
+
+            if let error {
+                Section { Text(error).foregroundStyle(.red) }
+            }
+        }
+    }
+
+    // MARK: Önizleme
+
+    private func previewView(profile: BankProfile, result: StatementParseResult) -> some View {
+        let included = candidates.filter(\.include)
+        let expenseTotal = included.filter { $0.row.kind == .expense }.map(\.row.amount).sum()
+
+        return List {
+            Section {
+                LabeledContent("Banka", value: profile.name)
+                LabeledContent("Okunan satır", value: "\(result.rows.count)")
+                if result.skippedCount > 0 {
+                    LabeledContent("Atlanan özet satırı", value: "\(result.skippedCount)")
+                }
+                LabeledContent("Eklenecek harcama", value: expenseTotal.formatted())
+            } footer: {
+                Text(result.expensesArePositive
+                     ? "Harcamalar pozitif, ödeme ve iadeler negatif olarak algılandı."
+                     : "Para çıkışları negatif, girişler pozitif olarak algılandı.")
+            }
+
+            candidateSection("Yeni", status: .new)
+            candidateSection("Yeni taksit planı", status: .newInstallmentPlan,
+                             footer: "Alım tarihi taksit sırasından geriye hesaplanır; kalan taksitler ileriye eklenir.")
+            candidateSection("Muhtemel tekrar", status: .possibleDuplicate,
+                             footer: "Elle girdiğin aynı tutarlı bir işlem var (±2 gün). Gerekirse işaretle.")
+            candidateSection("Mevcut taksit planında", status: .installmentKnown)
+            candidateSection("Karta ödeme", status: .payment,
+                             footer: "Ödemeleri genelde banka hesabından transfer olarak girersin; çift saymamak için kapalı.")
+            candidateSection("Zaten eklenmiş", status: .duplicate)
+        }
+        .safeAreaInset(edge: .bottom) {
+            Button {
+                commit()
+            } label: {
+                Text("\(included.count) işlemi içe aktar")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .disabled(included.isEmpty)
+            .padding()
+        }
+    }
+
+    @ViewBuilder
+    private func candidateSection(_ title: String, status: ImportCandidate.Status, footer: String? = nil) -> some View {
+        let indices = candidates.indices.filter { candidates[$0].status == status }
+        if !indices.isEmpty {
+            Section {
+                let expenseCategories = categories.filter { $0.kind == .expense }
+                ForEach(indices, id: \.self) { index in
+                    CandidateRow(candidate: $candidates[index], categories: expenseCategories)
+                }
+            } header: {
+                Text("\(title) (\(indices.count))")
+            } footer: {
+                if let footer { Text(footer) }
+            }
+        }
+    }
+
+    private func doneView(_ summary: ImportSummary) -> some View {
+        ContentUnavailableView {
+            Label("İçe aktarıldı", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(ChartPalette.single)
+        } description: {
+            Text("\(summary.added) işlem eklendi" + (summary.plansCreated > 0 ? ", \(summary.plansCreated) taksit planı oluşturuldu" : "") + ". \(summary.skipped) satır atlandı.")
+        } actions: {
+            Button("Başka dosya") { stage = .start }
+                .buttonStyle(.glass)
+        }
+    }
+
+    // MARK: Eylemler
+
+    private func load(_ url: URL) {
+        error = nil
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let data = try Data(contentsOf: url)
+            let rows: [[String]]
+            switch url.pathExtension.lowercased() {
+            case "xlsx":
+                rows = try XLSXReader.rows(from: data)
+            case "xls":
+                error = "Eski Excel (.xls) biçimi okunamıyor. Dosyayı Numbers'ta açıp Dosya > Dışa Aktar > CSV ya da Excel (.xlsx) olarak kaydet."
+                return
+            default:
+                rows = CSVReader.rows(from: Self.decodeText(data))
+            }
+            parse(rows: rows, fileName: url.lastPathComponent, columns: nil)
+        } catch {
+            self.error = "Dosya okunamadı: \(error.localizedDescription)"
+        }
+    }
+
+    private func parse(rows: [[String]], fileName: String, columns: (Int, ColumnMap)?) {
+        guard let account else { return }
+        let profile = BankProfile.detect(fileName: fileName, rows: rows)
+        do {
+            let result = try StatementParser.parse(rows: rows, profile: profile,
+                                                   columns: columns.map { (headerIndex: $0.0, map: $0.1) })
+            candidates = try ImportService(context: context).prepare(result, account: account)
+            categories = try context.fetch(FetchDescriptor<EntryCategory>(
+                predicate: #Predicate { !$0.isArchived }, sortBy: [SortDescriptor(\.sortOrder)]))
+            stage = .preview(profile: profile, result: result)
+        } catch StatementParser.ParseError.headerNotFound {
+            stage = .mapping(rows: rows, fileName: fileName)
+        } catch StatementParser.ParseError.noRows {
+            error = "Dosyada işlem satırı bulunamadı."
+            stage = .start
+        } catch {
+            self.error = "Çözümlenemedi: \(error.localizedDescription)"
+            stage = .start
+        }
+    }
+
+    private func commit() {
+        guard let account else { return }
+        do {
+            let summary = try ImportService(context: context).commit(candidates, account: account)
+            stage = .done(summary)
+        } catch {
+            self.error = "İçe aktarılamadı: \(error.localizedDescription)"
+        }
+    }
+
+    /// UTF-8, olmazsa Türkçe Windows (1254), olmazsa Latin-1.
+    static func decodeText(_ data: Data) -> String {
+        if let text = String(data: data, encoding: .utf8) { return text }
+        let turkish = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(
+            CFStringEncoding(CFStringEncodings.windowsLatin5.rawValue)))
+        return String(data: data, encoding: turkish) ?? String(decoding: data, as: UTF8.self)
+    }
+}
+
+private struct CandidateRow: View {
+    @Binding var candidate: ImportCandidate
+    let categories: [EntryCategory]
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button {
+                candidate.include.toggle()
+            } label: {
+                Image(systemName: candidate.include ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(candidate.include ? ChartPalette.single : Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(candidate.include ? "Dahil" : "Hariç")
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(candidate.row.description).font(.subheadline).lineLimit(2)
+                HStack(spacing: 6) {
+                    Text(TR.shortDate(candidate.row.date))
+                    if let marker = candidate.row.installment {
+                        Text("· Taksit \(marker.current)/\(marker.total)")
+                    }
+                    if candidate.row.kind == .refund { Text("· İade") }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                if candidate.row.kind == .expense {
+                    Menu {
+                        Button("Kategorisiz") { candidate.category = nil }
+                        ForEach(categories) { category in
+                            Button(category.name, systemImage: category.icon) { candidate.category = category }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: candidate.category?.icon ?? "questionmark.circle")
+                            Text(candidate.category?.name ?? "Kategori seç")
+                            Image(systemName: "chevron.up.chevron.down").font(.caption2)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(candidate.category.map { Color(hex: $0.colorHex) } ?? .secondary)
+                    }
+                }
+            }
+            Spacer(minLength: 4)
+            Text(amountText)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(candidate.row.kind == .expense ? Color.primary : Color.income)
+        }
+        .opacity(candidate.include ? 1 : 0.55)
+    }
+
+    private var amountText: String {
+        let value = candidate.row.amount.formatted()
+        return candidate.row.kind == .expense ? "-" + value : "+" + value
+    }
+}
+
+/// Başlığı tanınmayan dosyalar için kolonları elle seçme.
+private struct ColumnMappingView: View {
+    let rows: [[String]]
+    let onContinue: (Int, ColumnMap) -> Void
+
+    @State private var headerRow = 0
+    @State private var dateColumn = 0
+    @State private var descriptionColumn = 1
+    @State private var amountColumn = 2
+
+    private var columnCount: Int { rows.prefix(30).map(\.count).max() ?? 0 }
+
+    var body: some View {
+        Form {
+            Section {
+                Text("Dosyanın kolonları otomatik tanınamadı. İlk satırlara bakıp hangi kolonun ne olduğunu seç.")
+                    .font(.subheadline)
+            }
+            Section("İlk satırlar") {
+                ForEach(Array(rows.prefix(12).enumerated()), id: \.offset) { index, row in
+                    Text("\(index + 1). " + row.joined(separator: " | "))
+                        .font(.caption.monospaced())
+                        .lineLimit(1)
+                        .foregroundStyle(index == headerRow ? Color.accentColor : .primary)
+                }
+            }
+            Section("Eşleme") {
+                Picker("Başlık satırı", selection: $headerRow) {
+                    Text("Başlık yok").tag(-1)
+                    ForEach(0..<min(rows.count, 30), id: \.self) { Text("\($0 + 1). satır").tag($0) }
+                }
+                columnPicker("Tarih", selection: $dateColumn)
+                columnPicker("Açıklama", selection: $descriptionColumn)
+                columnPicker("Tutar", selection: $amountColumn)
+            }
+            Section {
+                Button("Devam") {
+                    onContinue(headerRow, ColumnMap(date: dateColumn, description: descriptionColumn, amount: amountColumn))
+                }
+            }
+        }
+    }
+
+    private func columnPicker(_ title: String, selection: Binding<Int>) -> some View {
+        Picker(title, selection: selection) {
+            ForEach(0..<max(columnCount, 1), id: \.self) { column in
+                Text(label(for: column)).tag(column)
+            }
+        }
+    }
+
+    private func label(for column: Int) -> String {
+        let letter = String(UnicodeScalar(UInt8(65 + column % 26)))
+        let sampleRow = headerRow >= 0 && headerRow < rows.count ? rows[headerRow] : rows.first ?? []
+        let sample = column < sampleRow.count ? sampleRow[column] : ""
+        return sample.isEmpty ? letter : "\(letter) · \(sample.prefix(18))"
+    }
+}
