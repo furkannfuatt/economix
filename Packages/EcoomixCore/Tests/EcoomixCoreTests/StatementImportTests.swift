@@ -102,6 +102,18 @@ struct StatementParserTests {
         #expect(result.rows.map(\.kind) == [.expense, .payment, .refund])
     }
 
+    @Test("Hesap türünden gelen işaret ipucu, eşit sayıda artı/eksi satırda tahminin önüne geçer")
+    func expenseSignHint() throws {
+        let rows = [["Tarih", "Açıklama", "Tutar"],
+                    ["07.10.2026", "BIM MAGAZALARI", "-320,00"],
+                    ["08.10.2026", "HAVALE GELEN", "1.000,00"]]
+        let auto = try StatementParser.parse(rows: rows, profile: .generic)
+        #expect(auto.rows.map(\.kind) == [.refund, .expense])
+        let hinted = try StatementParser.parse(rows: rows, profile: .generic, expenseSign: .negative)
+        #expect(!hinted.expensesArePositive)
+        #expect(hinted.rows.map(\.kind) == [.expense, .income])
+    }
+
     @Test("Başlık bulunamazsa elle eşleme için hata")
     func noHeader() {
         #expect(throws: StatementParser.ParseError.headerNotFound) {

@@ -67,7 +67,9 @@ struct ImportView: View {
                 Button("Dosya seç", systemImage: "doc.badge.plus") { showPicker = true }
                     .disabled(account == nil)
             } footer: {
-                Text("Bankanın internet şubesinden ya da mobil uygulamasından indirdiğin CSV veya Excel (.xlsx) ekstresini seç. Dosya cihazında işlenir, hiçbir yere gönderilmez.")
+                Text(account?.isCreditCard == false
+                     ? "Banka kartı harcamaları vadesiz hesap dökümünde görünür; bankanın hesap hareketleri dökümünü (CSV/.xlsx) seç. Banka hesaplarına ve banka kartlarına elle girdiğin kayıtlar otomatik eşleştirilir."
+                     : "Bankanın internet şubesinden ya da mobil uygulamasından indirdiğin CSV veya Excel (.xlsx) ekstresini seç. Bu karta elle girdiğin kayıtlar otomatik eşleştirilir. Dosya cihazında işlenir, hiçbir yere gönderilmez.")
             }
 
             Section("Desteklenenler") {
@@ -107,7 +109,9 @@ struct ImportView: View {
             candidateSection("Yeni taksit planı", status: .newInstallmentPlan,
                              footer: "Alım tarihi taksit sırasından geriye hesaplanır; kalan taksitler ileriye eklenir.")
             candidateSection("Muhtemel tekrar", status: .possibleDuplicate,
-                             footer: "Elle girdiğin aynı tutarlı bir işlem var (±2 gün). Gerekirse işaretle.")
+                             footer: "Elle girdiğin aynı tutarlı bir işlem var (±2 gün). Eklenmez; senin kaydın ekstreyle eşleştirilir.")
+            candidateSection("Benzer tutar", status: .similarAmount,
+                             footer: "Tutarı yakın (±5 ₺ ya da ±%2) elle girilmiş bir işlem var. İşyeri de tutuyorsa aynı alışveriş sayılır ve senin kaydının tutarı ekstredeki tutara düzeltilir; tutmuyorsa satır eklenir, gerekirse işaretini kaldır.")
             candidateSection("Mevcut taksit planında", status: .installmentKnown)
             candidateSection("Karta ödeme", status: .payment,
                              footer: "Ödemeleri genelde banka hesabından transfer olarak girersin; çift saymamak için kapalı.")
@@ -151,7 +155,7 @@ struct ImportView: View {
             Label("İçe aktarıldı", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(ChartPalette.single)
         } description: {
-            Text("\(summary.added) işlem eklendi" + (summary.plansCreated > 0 ? ", \(summary.plansCreated) taksit planı oluşturuldu" : "") + ". \(summary.skipped) satır atlandı.")
+            Text(Self.summaryText(summary))
         } actions: {
             Button("Başka dosya") { stage = .start }
                 .buttonStyle(.glass)
@@ -187,7 +191,8 @@ struct ImportView: View {
         let profile = BankProfile.detect(fileName: fileName, rows: rows)
         do {
             let result = try StatementParser.parse(rows: rows, profile: profile,
-                                                   columns: columns.map { (headerIndex: $0.0, map: $0.1) })
+                                                   columns: columns.map { (headerIndex: $0.0, map: $0.1) },
+                                                   expenseSign: ImportService.expenseSign(for: account))
             candidates = try ImportService(context: context).prepare(result, account: account)
             categories = try context.fetch(FetchDescriptor<EntryCategory>(
                 predicate: #Predicate { !$0.isArchived }, sortBy: [SortDescriptor(\.sortOrder)]))
@@ -211,6 +216,15 @@ struct ImportView: View {
         } catch {
             self.error = "İçe aktarılamadı: \(error.localizedDescription)"
         }
+    }
+
+    static func summaryText(_ summary: ImportSummary) -> String {
+        var parts = ["\(summary.added) işlem eklendi"]
+        if summary.plansCreated > 0 { parts.append("\(summary.plansCreated) taksit planı oluşturuldu") }
+        if summary.linked > 0 { parts.append("\(summary.linked) satır elle girdiğin kayıtlarla eşleştirildi") }
+        if summary.amountsCorrected > 0 { parts.append("\(summary.amountsCorrected) kaydın tutarı ekstreye göre düzeltildi") }
+        if summary.skipped > 0 { parts.append("\(summary.skipped) satır atlandı") }
+        return parts.joined(separator: ", ") + "."
     }
 
     /// UTF-8, olmazsa Türkçe Windows (1254), olmazsa Latin-1.
@@ -249,6 +263,9 @@ private struct CandidateRow: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                if let entry = candidate.matchedEntry {
+                    MatchNote(candidate: candidate, entry: entry)
+                }
                 if candidate.row.kind == .expense {
                     Menu {
                         Button("Kategorisiz") { candidate.category = nil }
@@ -278,6 +295,41 @@ private struct CandidateRow: View {
     private var amountText: String {
         let value = candidate.row.amount.formatted()
         return candidate.row.kind == .expense ? "-" + value : "+" + value
+    }
+}
+
+/// Satırın eşleştiği kayıt: "Elle girdiğin: Migros · 2 Eki · 245,00 ₺".
+private struct MatchNote: View {
+    let candidate: ImportCandidate
+    let entry: LedgerEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Label {
+                Text("\(prefix): \(entry.displayTitle) · \(TR.dayMonth(entry.date)) · \(entry.amount.formatted())")
+            } icon: {
+                Image(systemName: icon)
+            }
+            if let difference = candidate.amountDifference {
+                Text(candidate.include
+                     ? "Fark \(difference.formatted()) · benzer olabilir, aynıysa işareti kaldır"
+                     : "Fark \(difference.formatted()) · kaydının tutarı \(candidate.row.amount.formatted()) olarak düzeltilecek")
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(candidate.status == .similarAmount && candidate.include ? Color.orange : Color.secondary)
+    }
+
+    private var prefix: String {
+        candidate.status == .installmentKnown ? "Taksit planında" : "Elle girdiğin"
+    }
+
+    private var icon: String {
+        switch candidate.status {
+        case .installmentKnown: "calendar.badge.checkmark"
+        case .similarAmount: "equal.circle"
+        default: "link"
+        }
     }
 }
 

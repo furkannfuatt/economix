@@ -134,8 +134,11 @@ public enum StatementParser {
 
     // MARK: Satırlar
 
+    /// - Parameter expenseSign: Hedef hesabın türünden gelen ipucu (banka dökümünde çıkışlar eksidir);
+    ///   verilmezse profilinki kullanılır.
     public static func parse(rows: [[String]], profile: BankProfile,
                              columns: (headerIndex: Int, map: ColumnMap)? = nil,
+                             expenseSign: ExpenseSign? = nil,
                              calendar: Calendar = FinanceCalendar.calendar) throws -> StatementParseResult {
         guard let detected = columns ?? detectColumns(in: rows) else { throw ParseError.headerNotFound }
         let map = detected.map
@@ -186,7 +189,7 @@ public enum StatementParser {
         guard !raws.isEmpty else { throw ParseError.noRows }
 
         let expensesPositive: Bool
-        switch profile.expenseSign {
+        switch expenseSign ?? profile.expenseSign {
         case .positive: expensesPositive = true
         case .negative: expensesPositive = false
         case .auto:

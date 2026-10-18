@@ -29,9 +29,16 @@ struct AccountsView: View {
         .toolbar {
             Menu {
                 Button("Yeni hesap", systemImage: "plus") { editing = AccountEditRequest() }
-                Section("Hazır kart şablonları") {
-                    ForEach(CardPreset.all) { preset in
-                        Button(preset.name, systemImage: "creditcard.fill") {
+                Section("Kredi kartı şablonları") {
+                    ForEach(CardPreset.all.filter { $0.type == .creditCard }) { preset in
+                        Button(preset.name, systemImage: AccountType.creditCard.defaultIcon) {
+                            editing = AccountEditRequest(preset: preset)
+                        }
+                    }
+                }
+                Section("Banka kartı şablonları") {
+                    ForEach(CardPreset.all.filter { $0.type == .debitCard }) { preset in
+                        Button(preset.name, systemImage: AccountType.debitCard.defaultIcon) {
                             editing = AccountEditRequest(preset: preset)
                         }
                     }
@@ -73,11 +80,15 @@ struct CardPreset: Identifiable {
     let id: String
     let name: String
     let colorHex: String
+    let type: AccountType
 
     static let all = [
-        CardPreset(id: "bonus", name: "Garanti BBVA Bonus", colorHex: "#0E8F6B"),
-        CardPreset(id: "world", name: "Yapı Kredi World", colorHex: "#5856D6"),
-        CardPreset(id: "axess", name: "Akbank Axess", colorHex: "#FF3B30"),
+        CardPreset(id: "bonus", name: "Garanti BBVA Bonus", colorHex: "#0E8F6B", type: .creditCard),
+        CardPreset(id: "world", name: "Yapı Kredi World", colorHex: "#5856D6", type: .creditCard),
+        CardPreset(id: "axess", name: "Akbank Axess", colorHex: "#FF3B30", type: .creditCard),
+        CardPreset(id: "garanti-debit", name: "Garanti BBVA Banka Kartı", colorHex: "#30A46C", type: .debitCard),
+        CardPreset(id: "yapikredi-debit", name: "Yapı Kredi Banka Kartı", colorHex: "#AF52DE", type: .debitCard),
+        CardPreset(id: "akbank-debit", name: "Akbank Banka Kartı", colorHex: "#FF6482", type: .debitCard),
     ]
 }
 
@@ -137,6 +148,13 @@ struct AccountEditView: View {
                     } footer: {
                         Text("Kesim gününden sonraki harcamalar bir sonraki ekstreye düşer. Ekstrendeki tarihlere göre ayarla.")
                     }
+                } else if type == .debitCard {
+                    Section {
+                        Label("Harcamalar doğrudan vadesiz hesaptan çekilir", systemImage: "info.circle")
+                            .font(.subheadline)
+                    } footer: {
+                        Text("Banka kartında taksit ve ekstre olmaz. Harcamaları ay sonunda bankanın vadesiz hesap dökümüyle içe aktarabilirsin.")
+                    }
                 } else {
                     Section {
                         TextField("Açılış bakiyesi", text: $openingBalance)
@@ -193,7 +211,7 @@ struct AccountEditView: View {
             isArchived = account.isArchived
         } else if let preset = request.preset {
             name = preset.name
-            type = .creditCard
+            type = preset.type
             colorHex = preset.colorHex
         }
     }

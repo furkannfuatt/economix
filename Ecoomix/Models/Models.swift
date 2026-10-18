@@ -5,7 +5,7 @@ import EcoomixCore
 // CloudKit kuralları: her alanın varsayılanı var ya da optional, unique yok, ilişkiler optional ve inverse'li.
 
 nonisolated enum AccountType: String, CaseIterable, Identifiable {
-    case cash, bank, creditCard
+    case cash, bank, debitCard, creditCard
 
     var id: String { rawValue }
 
@@ -13,6 +13,7 @@ nonisolated enum AccountType: String, CaseIterable, Identifiable {
         switch self {
         case .cash: "Nakit"
         case .bank: "Banka hesabı"
+        case .debitCard: "Banka kartı"
         case .creditCard: "Kredi kartı"
         }
     }
@@ -21,6 +22,7 @@ nonisolated enum AccountType: String, CaseIterable, Identifiable {
         switch self {
         case .cash: "banknote.fill"
         case .bank: "building.columns.fill"
+        case .debitCard: "creditcard.and.123"
         case .creditCard: "creditcard.fill"
         }
     }

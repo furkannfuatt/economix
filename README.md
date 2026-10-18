@@ -51,9 +51,14 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 1. Bankanın internet şubesinden kart ekstresini **Excel (.xlsx)** ya da **CSV** olarak indir.
 2. **Ayarlar > Ekstre içe aktar**'a gir, ilgili kartı seç ve dosyayı seç.
 3. Önizlemede satırları kontrol et ve **İçe aktar**'a bas.
-   - Daha önce eklenen satırlar ("zaten var") ve elle girdiğin benzer işlemler ("muhtemel tekrar") varsayılan olarak kapalı gelir.
+   - **Zaten eklenmiş:** daha önce içe aktarılan satırlar.
+   - **Muhtemel tekrar:** aynı hesapta, ±2 gün içinde, aynı tutarla elle girdiğin bir işlem var. Eklenmez; senin kaydın ekstreyle eşleştirilir.
+   - **Benzer tutar:** tutar ±5 ₺ ya da ±%2 yakın (ör. 245 ₺ girdin, ekstrede 245,28 ₺). İşyeri adı da tutuyorsa aynı alışveriş sayılır, eklenmez ve senin kaydının tutarı ekstredeki kuruşlu tutara düzeltilir. Tutmuyorsa satır eklenir ama "benzer olabilir" notuyla gösterilir; aynıysa işaretini kaldır.
+   - Her elle girdiğin kayıt en fazla bir ekstre satırıyla eşleşir; önce tam tutar, sonra en küçük fark aranır. Her satırın altında hangi kaydınla eşleştiği yazar.
    - "TAKSİT 3/6" gibi satırlar mevcut plana bağlanır. Plan yoksa alım tarihi geriye hesaplanarak yeni plan oluşturulur.
    - Karta yapılan ödemeler varsayılan olarak kapalıdır; iadeler gelir olarak eklenir.
+
+**Banka kartı (debit):** Ayarlar > Hesaplar ve kartlar > + menüsünde her banka için kredi kartı ve banka kartı şablonu var. Banka kartı harcamaları vadesiz hesap dökümünde görünür. Bu dökümü içe aktarırken bir banka hesabı ya da banka kartı seç; eşleştirme tüm banka hesaplarına ve banka kartlarına elle girdiğin kayıtlara bakar. Kredi kartı ekstresi ise yalnızca o kartın kayıtlarıyla karşılaştırılır.
 
 Eski `.xls` biçimi okunamaz. Dosyayı Numbers'ta açıp CSV ya da .xlsx olarak dışa aktar.
 

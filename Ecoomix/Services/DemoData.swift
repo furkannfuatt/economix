@@ -13,10 +13,11 @@ enum DemoData {
         func cat(_ key: String) -> EntryCategory? { categories.first { $0.seedKey == key } }
 
         let cash = try context.fetch(FetchDescriptor<Account>()).first!
-        let bank = makeAccount("Maaş Hesabı", .bank, "#0A84FF", context: context)
-        let bonus = makeAccount("Garanti BBVA Bonus", .creditCard, "#0E8F6B", statementDay: 15, context: context)
-        let world = makeAccount("Yapı Kredi World", .creditCard, "#5856D6", statementDay: 5, context: context)
-        let axess = makeAccount("Akbank Axess", .creditCard, "#FF3B30", statementDay: 25, context: context)
+        let bank = makeAccount("Maaş Hesabı", .bank, "#0A84FF", sortOrder: 1, context: context)
+        let bonus = makeAccount("Garanti BBVA Bonus", .creditCard, "#0E8F6B", statementDay: 15, sortOrder: 2, context: context)
+        let world = makeAccount("Yapı Kredi World", .creditCard, "#5856D6", statementDay: 5, sortOrder: 3, context: context)
+        let axess = makeAccount("Akbank Axess", .creditCard, "#FF3B30", statementDay: 25, sortOrder: 4, context: context)
+        let debit = makeAccount("Garanti BBVA Banka Kartı", .debitCard, "#30A46C", sortOrder: 5, context: context)
         bonus.creditLimitMinor = 150_000_00
         world.creditLimitMinor = 90_000_00
         axess.creditLimitMinor = 60_000_00
@@ -55,7 +56,7 @@ enum DemoData {
             func randomDay() -> Date { day(Int.random(in: 1...month.dayCount, using: &rng)) }
             func pick<T>(_ list: [T]) -> T { list[Int.random(in: 0..<list.count, using: &rng)] }
             func amount(_ range: ClosedRange<Double>) -> Double { (Double.random(in: range, using: &rng) * 100).rounded() / 100 }
-            let cards = [bonus, axess, world]
+            let cards = [bonus, axess, world, debit]
 
             if offset % 3 == 1 { add(amount(4_000...9_000), .income, day(20), cat("freelance"), bank, "Freelance proje") }
             add(amount(650...1_100), .expense, day(12), cat("fatura"), bank, "Enerjisa Elektrik")
@@ -127,14 +128,34 @@ enum DemoData {
         try service.addInstallmentPurchase(total: Money(minor: 18_000_00), count: 3, purchaseDate: ago(1, day: 17),
                                            category: cat("seyahat"), account: bonus, merchant: "Pegasus",
                                            title: "Bodrum tatili")
+        if UserDefaults.standard.string(forKey: "importFile") != nil {
+            addImportFixtureMatches(card: bonus, context: context)
+        }
         try context.save()
     }
 
+    /// UI testindeki örnek ekstreyle (EcoomixUITests/Fixtures/garanti-ornek.csv) eşleşecek elle kayıtlar.
+    private static func addImportFixtureMatches(card: Account, context: ModelContext) {
+        let calendar = FinanceCalendar.calendar
+        let manual: [(Int, Int, String)] = [
+            (1_234_00, 2, "Migros"),      // ekstrede 1.234,56 → benzer tutar, aynı işyeri
+            (185_00, 4, "Starbucks"),     // ekstrede 185,00 → muhtemel tekrar
+            (2_040_00, 10, "Benzin"),     // ekstrede OPET 2.050,00 → benzer tutar, farklı işyeri
+        ]
+        for (minor, day, merchant) in manual {
+            let date = calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: 12))!
+            let entry = LedgerEntry(amount: Money(minor: minor), kind: .expense, date: date, merchant: merchant)
+            context.insert(entry)
+            entry.account = card
+        }
+    }
+
     private static func makeAccount(_ name: String, _ type: AccountType, _ color: String, statementDay: Int = 15,
-                                    context: ModelContext) -> Account {
+                                    sortOrder: Int, context: ModelContext) -> Account {
         let account = Account(name: name, type: type)
         account.colorHex = color
         account.statementDay = statementDay
+        account.sortOrder = sortOrder
         context.insert(account)
         return account
     }
