@@ -8,8 +8,8 @@ Kullanıcı yalnızca kendi iPhone'unda kullanacağı detaylı bir finans uygula
 - Kredi kartı taksitlerini takip etmek (kaç taksit kaldı, aylık yük ne)
 - "Neyden tasarruf etmeliyim" sorusuna somut cevap almak
 
-Proje klasörü (`ecoomix`) boş, yani sıfırdan başlıyoruz.
-Ortam: Xcode 26.5, Swift 6.3, iOS 26.5 simülatörü, XcodeGen (`~/.local/bin/xcodegen`) kurulu. Ücretli Apple Developer takımı **TAKIM_KIMLIGI** (1 yıllık profiller mevcut).
+Proje klasörü boş, yani sıfırdan başlıyoruz.
+Ortam: Xcode 26.5, Swift 6.3, iOS 26.5 simülatörü, XcodeGen (`~/.local/bin/xcodegen`) kurulu. Ücretli Apple Developer hesabı mevcut (takım kimliği `Config/Secrets.xcconfig` içinde).
 
 ### Kullanıcının verdiği kararlar
 | Konu | Karar |
@@ -181,7 +181,7 @@ Her kural şu yapıda bir `Insight` döndürür: `severity`, `title`, `message`,
 - **Görsel kontrol:** `xcrun simctl install/launch` (`-demoData` ile) ve `xcrun simctl io booted screenshot`. Ekran görüntüleri incelenerek her sekme kontrol edilir.
 - **Cihaz:**
   - iPhone kabloyla bağlanır, Ayarlar > Gizlilik ve Güvenlik > Geliştirici Modu açılır.
-  - Kurulum: `xcodebuild -destination 'platform=iOS,id=<udid>' -allowProvisioningUpdates DEVELOPMENT_TEAM=TAKIM_KIMLIGI`
+  - Kurulum: `xcodebuild -destination 'platform=iOS,id=<udid>' -allowProvisioningUpdates` (takım kimliği `Config/Secrets.xcconfig` > `DEVELOPMENT_TEAM`)
   - İlk seferde iCloud container'ın Xcode'da oluşturulması için bir kez Signing & Capabilities ekranının açılması gerekebilir.
 - **iCloud:** Doğrudan Xcode'dan kurulan sürüm CloudKit **Development** ortamını kullanır. İleride TestFlight'a geçilirse şemanın CloudKit Console'da Production'a deploy edilmesi gerekir; bu not README'ye yazılacak.
 

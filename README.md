@@ -16,7 +16,8 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 
 - Xcode 26.5+, iOS 26 cihaz/simülatör
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen). `Makefile`, `~/.local/share/xcodegen-dist/bin/xcodegen` yolunu kullanır. Farklı bir kurulum için: `make XCODEGEN=xcodegen …`
-- Ücretli Apple Developer hesabı (takım `TAKIM_KIMLIGI`; iCloud/CloudKit için gerekli)
+- Ücretli Apple Developer hesabı (iCloud/CloudKit için gerekli). Takım kimliğini `Config/Secrets.xcconfig` içindeki `DEVELOPMENT_TEAM`'e yaz; bu dosya git'e girmez.
+- Kendi hesabınla derlerken paket kimliğini (`project.yml` > `bundleIdPrefix`) ve iCloud kapsayıcısını (`project.yml` entitlements ile `ModelContainerFactory.swift`) kendine göre değiştir; `com.furkanfuat.ecoomix` yalnızca bu projenin sahibine aittir.
 
 ## Komutlar
 
@@ -117,3 +118,7 @@ EcoomixUITests         Ekran görüntüsü ve içe aktarma akışı testleri
 ```
 
 Tasarım dokümanı: `docs/superpowers/specs/2026-10-18-ecoomix-design.md`
+
+## Lisans
+
+[MIT](LICENSE). Kullanılan tek dış paket [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) Apache 2.0 lisanslıdır.
