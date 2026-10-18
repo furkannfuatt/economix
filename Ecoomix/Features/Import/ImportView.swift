@@ -20,8 +20,10 @@ struct ImportView: View {
     @State private var showPicker = false
     @State private var candidates: [ImportCandidate] = []
     @State private var error: String?
+    /// PDF okunduğunda paylaşılabilecek gizlenmiş biçim örneği (okuma sorunlarını gidermek için).
+    @State private var structureSample: String?
 
-    private static let types: [UTType] = [.commaSeparatedText, .tabSeparatedText, .plainText,
+    private static let types: [UTType] = [.pdf, .commaSeparatedText, .tabSeparatedText, .plainText,
                                           UTType(filenameExtension: "xlsx"), UTType(filenameExtension: "xls")]
         .compactMap { $0 }
 
@@ -73,6 +75,7 @@ struct ImportView: View {
             }
 
             Section("Desteklenenler") {
+                Label("PDF, Excel (.xlsx) ve CSV ekstreler", systemImage: "doc.text")
                 Label("Garanti BBVA (Bonus), Yapı Kredi (World), Akbank (Axess)", systemImage: "building.columns")
                 Label("Kolonları tanınmayan dosyalar için elle eşleme", systemImage: "tablecells")
                 Label("Taksitler plana bağlanır, aynı satır iki kez eklenmez", systemImage: "checkmark.shield")
@@ -80,8 +83,23 @@ struct ImportView: View {
             .font(.subheadline)
 
             if let error {
-                Section { Text(error).foregroundStyle(.red) }
+                Section {
+                    Text(error).foregroundStyle(.red)
+                    structureShareLink
+                }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var structureShareLink: some View {
+        if let structureSample {
+            ShareLink(item: structureSample, subject: Text("Ecoomix ekstre biçim örneği")) {
+                Label("Biçim örneğini paylaş (gizlenmiş)", systemImage: "square.and.arrow.up")
+            }
+            Text("Harcamaların görünmez: rakamlar 9, harfler X olur; yalnızca \"Tarih, Tutar, Taksit\" gibi başlıklar kalır. Bunu gönderirsen okuyucu senin bankana göre ayarlanabilir.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -103,6 +121,14 @@ struct ImportView: View {
                 Text(result.expensesArePositive
                      ? "Harcamalar pozitif, ödeme ve iadeler negatif olarak algılandı."
                      : "Para çıkışları negatif, girişler pozitif olarak algılandı.")
+            }
+
+            if structureSample != nil {
+                Section {
+                    structureShareLink
+                } header: {
+                    Text("Eksik ya da hatalı satır var mı?")
+                }
             }
 
             candidateSection("Yeni", status: .new)
@@ -166,12 +192,25 @@ struct ImportView: View {
 
     private func load(_ url: URL) {
         error = nil
+        structureSample = nil
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         do {
             let data = try Data(contentsOf: url)
             let rows: [[String]]
             switch url.pathExtension.lowercased() {
+            case "pdf":
+                let lines: [String]
+                do {
+                    lines = try PDFTextReader.lines(from: data)
+                } catch PDFTextReader.ReadError.noText {
+                    error = "Bu PDF'te okunabilir metin yok (taranmış görüntü olabilir). Bankanın uygulamasından ekstreyi PDF yerine Excel olarak almayı dene."
+                    return
+                }
+                structureSample = StatementStructure.masked(lines: lines).joined(separator: "\n")
+                parse(rows: PDFStatementLines.rows(from: lines), fileName: url.lastPathComponent,
+                      columns: (0, PDFStatementLines.columns))
+                return
             case "xlsx":
                 rows = try XLSXReader.rows(from: data)
             case "xls":
@@ -200,7 +239,9 @@ struct ImportView: View {
         } catch StatementParser.ParseError.headerNotFound {
             stage = .mapping(rows: rows, fileName: fileName)
         } catch StatementParser.ParseError.noRows {
-            error = "Dosyada işlem satırı bulunamadı."
+            error = structureSample == nil
+                ? "Dosyada işlem satırı bulunamadı."
+                : "PDF okundu ama işlem satırı tanınamadı. Aşağıdaki gizlenmiş biçim örneğini paylaşırsan okuyucu bankana göre ayarlanabilir."
             stage = .start
         } catch {
             self.error = "Çözümlenemedi: \(error.localizedDescription)"

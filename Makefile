@@ -46,7 +46,8 @@ screens: generate
 	rm -rf build/screens && mkdir -p build/screens
 	xcrun simctl uninstall "$(SIM)" com.furkanfuat.ecoomix 2>/dev/null || true
 	TEST_RUNNER_SCREENSHOT_DIR="$(CURDIR)/build/screens" \
-	TEST_RUNNER_IMPORT_FILE="$(CURDIR)/EcoomixUITests/Fixtures/garanti-ornek.csv" xcodebuild -project Ecoomix.xcodeproj -scheme EcoomixScreens \
+	TEST_RUNNER_IMPORT_FILE="$(CURDIR)/EcoomixUITests/Fixtures/garanti-ornek.csv" \
+	TEST_RUNNER_IMPORT_PDF="$(CURDIR)/EcoomixUITests/Fixtures/garanti-ornek.pdf" xcodebuild -project Ecoomix.xcodeproj -scheme EcoomixScreens \
 		-derivedDataPath build/DerivedData -destination $(DEST) test
 
 screenshot:

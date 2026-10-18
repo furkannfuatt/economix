@@ -7,7 +7,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 - **Raporlar:** 1/3/6/12 aylık gelir-gider, tasarruf oranı, kategori trendi, en çok harcanan yerler. Taksitler için iki görünüm var: "Aylık yük" (taksitler aylara yayılır) ve "Satın alma" (alım ayında tek tutar).
 - **Ödemeler:** taksit planları ve önümüzdeki 12 ayın yükü, abonelikler ve düzenli ödemeler, kart ekstre durumu
 - **Bildirimler:** bütçe %80/%100, kart son ödeme, abonelik yenileme, aylık özet
-- **Ekstre içe aktarma:** CSV ve Excel (.xlsx). Garanti BBVA, Yapı Kredi ve Akbank profilleri; kolonlar tanınmazsa elle eşleme
+- **Ekstre içe aktarma:** PDF, Excel (.xlsx) ve CSV. Garanti BBVA, Yapı Kredi ve Akbank profilleri; kolonlar tanınmazsa elle eşleme
 - **Yapay zekâ analizi (isteğe bağlı):** Google Gemini ile kişisel tasarruf önerileri
 - **Face ID kilidi, CSV dışa aktarma**
 
@@ -48,7 +48,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 
 ## Ekstre içe aktarma
 
-1. Bankanın internet şubesinden kart ekstresini **Excel (.xlsx)** ya da **CSV** olarak indir.
+1. Bankanın uygulamasından ya da internet şubesinden kart ekstresini **PDF**, **Excel (.xlsx)** ya da **CSV** olarak indir.
 2. **Ayarlar > Ekstre içe aktar**'a gir, ilgili kartı seç ve dosyayı seç.
 3. Önizlemede satırları kontrol et ve **İçe aktar**'a bas.
    - **Zaten eklenmiş:** daha önce içe aktarılan satırlar.
@@ -61,6 +61,8 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 **Banka kartı (debit):** Ayarlar > Hesaplar ve kartlar > + menüsünde her banka için kredi kartı ve banka kartı şablonu var. Banka kartı harcamaları vadesiz hesap dökümünde görünür. Bu dökümü içe aktarırken bir banka hesabı ya da banka kartı seç; eşleştirme tüm banka hesaplarına ve banka kartlarına elle girdiğin kayıtlara bakar. Kredi kartı ekstresi ise yalnızca o kartın kayıtlarıyla karşılaştırılır.
 
 Eski `.xls` biçimi okunamaz. Dosyayı Numbers'ta açıp CSV ya da .xlsx olarak dışa aktar.
+
+**PDF ekstreler:** Tarihle başlayıp tutarla biten satırlar işlem sayılır. Satırlar sayfadaki konuma göre kurulduğu için sütunlu PDF'ler de okunur. Taksit kolonu ("3/6") ve bonus/puan kolonu ayırt edilir. Taranmış (yalnızca görüntü olan) PDF'ler okunamaz. Okumada sorun olursa önizlemedeki **Biçim örneğini paylaş** düğmesi gizlenmiş bir örnek üretir: rakamlar 9'a, harfler X'e döner, yalnızca başlık kelimeleri kalır. Okuyucu bu örnekle bankana göre ayarlanabilir.
 
 > Banka profilleri yaygın kolon adlarına göre yazıldı ("Tarih", "İşlem/Açıklama", "Tutar", "Taksit", "Borç/Alacak"). Gerçek bir ekstre düzgün okunmazsa elle eşleme ekranı devreye girer. Kolon düzeni belli olan bir örnek dosyayla profil kesinleştirilebilir (`Packages/EcoomixCore/Tests/EcoomixCoreTests/Fixtures`).
 

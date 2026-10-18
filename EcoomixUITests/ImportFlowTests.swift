@@ -3,6 +3,21 @@ import XCTest
 /// Ayarlar > Ekstre içe aktar yolunu gerçek dokunuşlarla sürer (dosya DEBUG -importFile ile verilir).
 final class ImportFlowTests: XCTestCase {
     @MainActor
+    func testPDFImportPreview() throws {
+        let file = try XCTUnwrap(ProcessInfo.processInfo.environment["IMPORT_PDF"])
+        let app = XCUIApplication()
+        app.launchArguments = ["-demoData", "-tab", "settings", "-importFile", file]
+        app.launch()
+
+        app.buttons["Ekstre içe aktar"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Banka"].waitForExistence(timeout: 10), "PDF önizlemesi açılmadı")
+        XCTAssertTrue(app.staticTexts["VATAN BILGISAYAR"].exists, "Taksitli satır okunamadı")
+        capture("15-pdf-onizleme")
+        app.swipeUp()
+        capture("16-pdf-onizleme-alt")
+    }
+
+    @MainActor
     func testImportPreviewRendersAndCommits() throws {
         let file = try XCTUnwrap(ProcessInfo.processInfo.environment["IMPORT_FILE"])
         let app = XCUIApplication()

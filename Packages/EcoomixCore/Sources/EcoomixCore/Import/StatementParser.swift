@@ -229,9 +229,17 @@ public enum StatementParser {
 
     // MARK: Alanlar
 
-    /// "01.10.2026", "1/10/26", "2026-10-01", "01.10.2026 14:23" ya da Excel seri numarası.
+    /// "01.10.2026", "1/10/26", "2026-10-01", "01.10.2026 14:23", "02 Ekim 2026" ya da Excel seri numarası.
     public static func parseDate(_ text: String, calendar: Calendar = FinanceCalendar.calendar) -> Date? {
-        let token = text.trimmingCharacters(in: .whitespaces).split(separator: " ").first.map(String.init) ?? ""
+        let words = text.trimmingCharacters(in: .whitespaces).split(separator: " ").map(String.init)
+        if words.count >= 3, let day = Int(words[0]), let month = monthNumber(words[1]), var year = Int(words[2]) {
+            if year < 100 { year += 2000 }
+            guard (1...31).contains(day), (2000...2100).contains(year),
+                  let date = calendar.date(from: DateComponents(year: year, month: month, day: day)),
+                  calendar.component(.day, from: date) == day else { return nil }
+            return date
+        }
+        let token = words.first ?? ""
         guard !token.isEmpty else { return nil }
 
         if let serial = Double(token), serial > 20_000, serial < 80_000 {
@@ -249,6 +257,15 @@ public enum StatementParser {
         guard let date = calendar.date(from: components),
               calendar.component(.day, from: date) == day else { return nil }
         return date
+    }
+
+    private static let monthPrefixes = ["OCA", "SUB", "MAR", "NIS", "MAY", "HAZ", "TEM", "AGU", "EYL", "EKI", "KAS", "ARA"]
+
+    /// "Ekim", "Eki", "EKİM", "Şubat" → ay numarası
+    static func monthNumber(_ word: String) -> Int? {
+        let folded = fold(word).filter(\.isLetter)
+        guard folded.count >= 3 else { return nil }
+        return monthPrefixes.firstIndex(of: String(folded.prefix(3))).map { $0 + 1 }
     }
 
     private static let keywordPattern = try! NSRegularExpression(
