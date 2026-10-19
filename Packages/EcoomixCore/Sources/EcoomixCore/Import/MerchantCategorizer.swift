@@ -51,7 +51,7 @@ public enum MerchantCategorizer {
         "ev": ["IKEA", "KOCTAS", "BAUHAUS", "ENGLISH HOME", "MADAME COCO", "KARACA", "TAC", "BELLONA", "ISTIKBAL",
                "PASABAHCE", "EVIDEA"],
         "bakim": ["GRATIS", "WATSONS", "ROSSMANN", "SEPHORA", "EVE SHOP", "FLORMAR", "GOLDEN ROSE", "MAC COSMETICS"],
-        "yatirim-gider": ["MIDAS", "BINANCE", "BTCTURK", "PARIBU", "BITLO", "ICRYPEX", "BYBIT", "OKX", "COINBASE",
+        "yatirim-alim": ["MIDAS", "BINANCE", "BTCTURK", "PARIBU", "BITLO", "ICRYPEX", "BYBIT", "OKX", "COINBASE",
                           "KRAKEN", "INTERACTIVE BROKERS", "IBKR", "TRADING 212", "ETORO"],
         "egitim": ["UDEMY", "KITAPYURDU", "D R", "IDEFIX", "BKM KITAP", "COURSERA", "OKUL", "KURS"],
     ]
@@ -71,7 +71,7 @@ public enum MerchantCategorizer {
         "bakim": ["KUAFOR", "BERBER", "GUZELLIK", "KOZMETIK"],
         "ev": ["MOBILYA", "HIRDAVAT", "ZUCCACIYE"],
         "elektronik": ["ELEKTRONIK", "BILGISAYAR"],
-        "yatirim-gider": ["YATIRIM", "KRIPTO"],
+        "yatirim-alim": ["YATIRIM", "KRIPTO"],
         "eglence": ["SINEMA", "CINEMA", "TIYATRO", "KONSER", "STEAM", "LUNAPARK", "AKVARYUM", "MUZE", "BOWLING"],
         "abonelik": ["AMAZONWEB", "OPENAI", "ELEVENLABS", "MIDJOURNEY", "HIGGSFIELD", "PERPLEXITY"],
         "seyahat": ["OTEL", "HOTEL", "PANSIYON", "HAVAYOLU", "TURIZM"],

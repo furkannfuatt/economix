@@ -36,6 +36,29 @@ struct ReportBuilderTests {
         #expect(s.savingsRate == 0.25)
     }
 
+    @Test("Yatırım gider sayılmaz; ayrı toplanır, net ve tasarruf oranı değişmez")
+    func investments() {
+        let txs = [
+            tx(.income, 40_000, d(2026, 10, 1)),
+            tx(.expense, 30_000, d(2026, 10, 3)),
+            tx(.investment, 6_000, d(2026, 10, 10)),
+            tx(.investment, 1_000, d(2026, 11, 2)),
+        ]
+        let s = ReportBuilder.summary(txs, in: october)
+        #expect(s.expense == tl(30_000))
+        #expect(s.investment == tl(6_000))
+        #expect(s.net == tl(10_000))
+        #expect(s.savingsRate == 0.25)
+        #expect(s.transactionCount == 3)
+        #expect(ReportBuilder.categoryTotals(txs, kind: .expense, in: october).map(\.amount) == [tl(30_000)])
+
+        let months = [YearMonth(year: 2026, month: 10), YearMonth(year: 2026, month: 11)]
+        let monthly = ReportBuilder.monthlyTotals(txs, months: months)
+        #expect(monthly.map(\.investment) == [tl(6_000), tl(1_000)])
+        #expect(monthly.map(\.expense) == [tl(30_000), .zero])
+        #expect(TxKind.investment.title == "Yatırım")
+    }
+
     @Test("Gelir yoksa tasarruf oranı nil")
     func noIncome() {
         #expect(ReportBuilder.summary([tx(.expense, 100, d(2026, 10, 1))], in: october).savingsRate == nil)

@@ -110,6 +110,7 @@ enum AppMaintenance {
     /// kaçırılan düzenli işlemleri üret.
     static func runOnLaunch(context: ModelContext) async {
         try? SeedService.deduplicate(in: context)
+        try? SeedService.migrateInvestmentCategory(in: context)
         try? SeedService.addNewDefaults(in: context)
         try? DataRepairs.run(in: context)
         #if DEBUG
@@ -117,7 +118,8 @@ enum AppMaintenance {
         #endif
         runOnForeground(context: context)
         let hasData = ((try? context.fetchCount(FetchDescriptor<EntryCategory>())) ?? 0) > 0
-        if hasData, await NotificationScheduler.authorizationStatus() == .notDetermined {
+        // Demo modunda (yalnızca simülatör/ekran görüntüsü) izin penceresi açılmaz.
+        if hasData, StoreMode.current != .demo, await NotificationScheduler.authorizationStatus() == .notDetermined {
             _ = await NotificationScheduler.requestAuthorization()
             await rescheduleReminders(context: context)
         }

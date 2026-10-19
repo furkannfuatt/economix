@@ -76,11 +76,16 @@ struct DashboardView: View {
             HStack(alignment: .top) {
                 StatTile(title: "Gelir", value: summary.income, tint: .income)
                 StatTile(title: "Gider", value: summary.expense)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("İşlem").font(.caption).foregroundStyle(.secondary)
-                    Text("\(summary.transactionCount)").font(.headline)
+                if summary.investment.isZero {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("İşlem").font(.caption).foregroundStyle(.secondary)
+                        Text("\(summary.transactionCount)").font(.headline)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    // Yatırım gider değildir; net ve tasarruf oranı bundan etkilenmez.
+                    StatTile(title: "Yatırım", value: summary.investment, tint: .investment)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

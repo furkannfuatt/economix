@@ -46,6 +46,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 - **Raporlar:** 1/3/6/12 aylık gelir-gider, tasarruf oranı, kategori trendi, en çok harcanan yerler. Taksitler için iki görünüm var: "Aylık yük" (taksitler aylara yayılır) ve "Satın alma" (alım ayında tek tutar).
 - **Ödemeler:** taksit planları ve önümüzdeki 12 ayın yükü, abonelikler ve düzenli ödemeler, kart ekstre durumu
 - **Bildirimler:** bütçe %80/%100, kart son ödeme, abonelik yenileme, aylık özet
+- **Yatırım:** gelir ve giderin yanında ayrı işlem türü. Yatırıma ayrılan para gider sayılmaz; bütçelere, nete ve tasarruf oranına girmez, Özet ve Raporlar'da ayrı gösterilir. Kartla yapılan yatırım alımı kart borcuna eklenir.
 - **Bütçe ayı:** Ayarlar > Bütçe ayı'ndan ayın başlangıç günü seçilir (ör. maaş günü 23 → 23 Ekim–22 Kasım). Özet, raporlar, bütçeler, tasarruf önerileri, Gemini analizi ve aylık özet bildirimi bu dönemlere göre hesaplanır. Dönem, günlerinin çoğunun düştüğü ayın adını alır (23 Ekim–22 Kasım → Kasım). Kart hesap kesimi, taksit ve abonelik tarihleri takvim günüyle kalır.
 - **Ekstre içe aktarma:** PDF, Excel (.xlsx) ve CSV. Garanti BBVA, Yapı Kredi ve Akbank profilleri; kolonlar tanınmazsa elle eşleme
 - **Yapay zekâ analizi (isteğe bağlı):** Google Gemini ile kişisel tasarruf önerileri
@@ -115,7 +116,7 @@ Sözlükte öne çıkanlar:
 - **Online Alışveriş:** Hepsiburada/Hepsipay, Amazon (iyzico üzerinden de), N11, Trendyol, Pazarama, Temu, AliExpress ve benzerleri. Alan adlı (`pazarama.com`), bitişik (`AmazonMarketTR`) ve kesik (`HEPSIBU`) yazımlar da tanınır. Trendyol Yemek/Go, HepsiExpress, Amazon Prime ve AWS kendi kategorilerinde kalır.
 - **Market:** ŞOK, A101, BİM, Migros, CarrefourSA ve adında market, süpermarket ya da gıda geçen her işyeri.
 - **Eğlence:** sinemalar (Cinemaximum, Paribu Cineverse, adında sinema/cinema geçenler), bilet siteleri, tema parkları, oyun mağazaları.
-- **Yatırım (gider):** aracı kurum ve kripto alımları (Midas, Binance, BtcTurk, Paribu, adında "yatırım" geçen kurumlar). Gelirdeki "Yatırım" getiriler içindir; "Burs" da gelir kategorisidir.
+- **Yatırım:** aracı kurum ve kripto alımları (Midas, Binance, BtcTurk, Paribu, adında "yatırım" geçen kurumlar) ayrı "Yatırım" türüne düşer. Getiriler (temettü, faiz, satış kârı) gelirdeki "Yatırım getirisi"ne, burslar "Burs"a girer.
 - **Abonelikler:** yapay zekâ ve yazılım servisleri (fal, OpenAI, Midjourney, ElevenLabs, Cursor, Vercel…). Bunlar kullandıkça çekildiği için yalnızca kategori atanır; düzenli ödeme oluşturulmaz.
 
 **Banka kartı (debit):** Ayarlar > Hesaplar ve kartlar > + menüsünde her banka için kredi kartı ve banka kartı şablonu var. Banka kartı harcamaları vadesiz hesap dökümünde görünür. Bu dökümü içe aktarırken bir banka hesabı ya da banka kartı seç; eşleştirme tüm banka hesaplarına ve banka kartlarına elle girdiğin kayıtlara bakar. Kredi kartı ekstresi ise yalnızca o kartın kayıtlarıyla karşılaştırılır.

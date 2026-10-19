@@ -40,6 +40,14 @@ struct CardLedgerTests {
         #expect(s.usedLimit == tl(3_800))
     }
 
+    @Test("Kartla yapılan yatırım alımı kart borcuna eklenir")
+    func investmentOnCard() {
+        let s = CardLedger.summary(cardID: card, cycle: cycle,
+                                   transactions: [charge(1_000, d(2026, 10, 1)), charge(2_000, d(2026, 10, 3), kind: .investment)],
+                                   asOf: d(2026, 10, 18))
+        #expect(s.lastStatementTotal == tl(3_000))
+    }
+
     @Test("Fazla ödeme kalan borcu eksiye düşürmez")
     func overpayment() {
         let txs = [

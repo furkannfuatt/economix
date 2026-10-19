@@ -1,12 +1,14 @@
 import Foundation
 
 public enum TxKind: String, CaseIterable, Sendable, Codable {
-    case expense, income, transfer
+    /// Yatırım: gider sayılmaz (bütçe, net ve tasarruf oranına girmez), ayrı toplanır; harcandığı kartın borcuna eklenir.
+    case expense, income, investment, transfer
 
     public var title: String {
         switch self {
         case .expense: "Gider"
         case .income: "Gelir"
+        case .investment: "Yatırım"
         case .transfer: "Transfer"
         }
     }

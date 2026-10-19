@@ -89,7 +89,8 @@ struct EntryEditorView: View {
                     DatePicker("Tarih", selection: $date, displayedComponents: .date)
                         .disabled(isInstallmentEntry)
                     if kind != .transfer {
-                        TextField(kind == .income ? "Kimden (ör. işveren)" : "Nereye (ör. Migros)", text: $merchant)
+                        TextField(kind == .income ? "Kimden (ör. işveren)" : kind == .investment ? "Nereye (ör. Midas)" : "Nereye (ör. Migros)",
+                                  text: $merchant)
                             .textInputAutocapitalization(.words)
                             .onSubmit(suggestCategory)
                     }
@@ -147,6 +148,7 @@ struct EntryEditorView: View {
         switch kind {
         case .expense: .primary
         case .income: .income
+        case .investment: .investment
         case .transfer: .transfer
         }
     }

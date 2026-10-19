@@ -17,6 +17,8 @@ public enum ReportMode: String, CaseIterable, Sendable {
 public struct PeriodSummary: Hashable, Sendable {
     public let income: Money
     public let expense: Money
+    /// Yatırıma ayrılan; gider ve nete dahil değildir.
+    public let investment: Money
     public let transactionCount: Int
 
     public var net: Money { income - expense }
@@ -38,6 +40,7 @@ public struct MonthlyTotals: Hashable, Sendable {
     public let month: YearMonth
     public let income: Money
     public let expense: Money
+    public let investment: Money
 
     public var net: Money { income - expense }
 }
@@ -71,16 +74,17 @@ public enum ReportBuilder {
     }
 
     public static func summary(_ txs: [TxSnapshot], in period: DatePeriod) -> PeriodSummary {
-        var income = Money.zero, expense = Money.zero, count = 0
+        var income = Money.zero, expense = Money.zero, investment = Money.zero, count = 0
         for tx in txs where period.contains(tx.date) {
             switch tx.kind {
             case .income: income += tx.amount
             case .expense: expense += tx.amount
+            case .investment: investment += tx.amount
             case .transfer: continue
             }
             count += 1
         }
-        return PeriodSummary(income: income, expense: expense, transactionCount: count)
+        return PeriodSummary(income: income, expense: expense, investment: investment, transactionCount: count)
     }
 
     public static func categoryTotals(_ txs: [TxSnapshot], kind: TxKind, in period: DatePeriod) -> [CategoryTotal] {
@@ -97,16 +101,20 @@ public enum ReportBuilder {
 
     public static func monthlyTotals(_ txs: [TxSnapshot], months: [YearMonth],
                                      rule: MonthRule = .calendarMonths) -> [MonthlyTotals] {
-        var income: [YearMonth: Money] = [:], expense: [YearMonth: Money] = [:]
+        var income: [YearMonth: Money] = [:], expense: [YearMonth: Money] = [:], investment: [YearMonth: Money] = [:]
         for tx in txs {
             let month = rule.month(containing: tx.date)
             switch tx.kind {
             case .income: income[month, default: .zero] += tx.amount
             case .expense: expense[month, default: .zero] += tx.amount
+            case .investment: investment[month, default: .zero] += tx.amount
             case .transfer: continue
             }
         }
-        return months.map { MonthlyTotals(month: $0, income: income[$0] ?? .zero, expense: expense[$0] ?? .zero) }
+        return months.map {
+            MonthlyTotals(month: $0, income: income[$0] ?? .zero, expense: expense[$0] ?? .zero,
+                          investment: investment[$0] ?? .zero)
+        }
     }
 
     public static func categoryTrend(_ txs: [TxSnapshot], categoryID: String?, months: [YearMonth],

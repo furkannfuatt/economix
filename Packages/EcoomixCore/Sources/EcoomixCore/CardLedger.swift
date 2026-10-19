@@ -35,7 +35,7 @@ public enum CardLedger {
             guard tx.accountID == cardID else { continue }
 
             let signed: Money = switch tx.kind {
-            case .expense, .transfer: tx.amount // transfer: karttan nakit avans
+            case .expense, .investment, .transfer: tx.amount // transfer: karttan nakit avans
             case .income: -tx.amount // iade
             }
 

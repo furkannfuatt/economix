@@ -6,6 +6,8 @@ public struct AIPayload: Codable, Equatable, Sendable {
         public let month: String
         public let income: Double
         public let expense: Double
+        /// Yatırıma ayrılan; gider ve tasarruf oranına dahil değil.
+        public let investment: Double
         public let savingsRatePercent: Double?
     }
 
@@ -63,6 +65,7 @@ public enum AIPayloadBuilder {
                 month: totals.month.description,
                 income: totals.income.lira,
                 expense: totals.expense.lira,
+                investment: totals.investment.lira,
                 savingsRatePercent: totals.income.isZero ? nil : (totals.net.ratio(of: totals.income) * 100).rounded()
             )
         }

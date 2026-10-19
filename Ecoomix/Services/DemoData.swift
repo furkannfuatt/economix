@@ -89,6 +89,8 @@ enum DemoData {
             add(amount(14_000...19_000), .transfer, day(25), nil, bank, "", to: bonus)
             add(amount(3_500...6_000), .transfer, day(15), nil, bank, "", to: world)
             add(amount(3_000...6_500), .transfer, day(5), nil, bank, "", to: axess)
+            // Her ay sabit yatırım (gider sayılmaz)
+            add(2_500, .investment, day(24), cat("yatirim-alim"), bank, "Midas")
         }
 
         func ago(_ months: Int, day: Int) -> Date { current.adding(months: -months).date(day: day) }

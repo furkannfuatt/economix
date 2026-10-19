@@ -80,7 +80,7 @@ struct UpcomingPayment: Identifiable {
             }
         }
 
-        for item in recurring where item.isActive && item.kind == .expense {
+        for item in recurring where item.isActive && (item.kind == .expense || item.kind == .investment) {
             guard let next = item.nextDate(after: date), next <= horizon else { continue }
             items.append(UpcomingPayment(id: "rec-\(item.id)", date: next, title: item.title,
                                          subtitle: item.account.map { "\(item.frequency.title) · \($0.name)" } ?? item.frequency.title,

@@ -40,7 +40,7 @@ struct TransactionsView: View {
             entries.reduce(.zero) { total, entry in
                 switch entry.kind {
                 case .income: total + entry.amount
-                case .expense: total - entry.amount
+                case .expense, .investment: total - entry.amount
                 case .transfer: total
                 }
             }

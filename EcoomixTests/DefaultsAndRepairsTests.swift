@@ -21,7 +21,9 @@ struct NewDefaultsAndRepairsTests {
     func newSeeds() {
         #expect(SeedService.categories.contains { $0.key == "online" && $0.name == "Online Alışveriş" && $0.kind == .expense })
         #expect(SeedService.categories.contains { $0.key == "burs" && $0.name == "Burs" && $0.kind == .income })
-        #expect(SeedService.categories.contains { $0.key == "yatirim-gider" && $0.name == "Yatırım" && $0.kind == .expense })
+        #expect(SeedService.categories.contains { $0.key == "yatirim-alim" && $0.name == "Yatırım" && $0.kind == .investment })
+        #expect(SeedService.categories.contains { $0.key == "yatirim" && $0.name == "Yatırım getirisi" && $0.kind == .income })
+        #expect(!SeedService.categories.contains { $0.key == "yatirim-gider" })
         #expect(Set(SeedService.categories.map(\.key)).count == SeedService.categories.count, "Anahtarlar tekil")
     }
 
@@ -31,7 +33,7 @@ struct NewDefaultsAndRepairsTests {
         try SeedService.addNewDefaults(in: f.context, defaults: defaults)
         let categories = try f.context.fetch(FetchDescriptor<EntryCategory>())
         #expect(categories.contains { $0.seedKey == "burs" && $0.kind == .income })
-        #expect(categories.contains { $0.seedKey == "yatirim-gider" && $0.kind == .expense })
+        #expect(categories.contains { $0.seedKey == "yatirim-alim" && $0.kind == .investment })
     }
 
     @Test("Sonradan eklenen varsayılan kategori mevcut kuruluma bir kez eklenir")
@@ -78,4 +80,38 @@ struct NewDefaultsAndRepairsTests {
         #expect(plan.sortedEntries.allSatisfy { $0.category === online })
         #expect(taxi.category === transport, "Gerçek taksi yerinde kalır")
     }
+
+    @Test("Gider olarak eklenmiş Yatırım kategorisi ve kayıtları yatırım türüne taşınır; gelirdeki Yatırım'ın adı netleşir")
+    func migratesInvestmentCategory() throws {
+        let old = EntryCategory(name: "Yatırım", icon: "chart", colorHex: "#000", kind: .expense, seedKey: "yatirim-gider")
+        let returns = EntryCategory(name: "Yatırım", icon: "chart", colorHex: "#000", kind: .income, seedKey: "yatirim")
+        f.context.insert(old)
+        f.context.insert(returns)
+        let service = LedgerService(context: f.context)
+        let entry = try service.addEntry(amount: Money(minor: 200_000), kind: .expense, date: .now, category: old,
+                                         account: nil, merchant: "MIDAS")
+        let item = RecurringItem(title: "Fon", amount: Money(minor: 100_000), kind: .expense, frequency: .monthly, dayOfMonth: 1,
+                                 startDate: .now, isSubscription: false)
+        f.context.insert(item)
+        item.category = old
+
+        try SeedService.migrateInvestmentCategory(in: f.context)
+        try SeedService.addNewDefaults(in: f.context, defaults: defaults)
+
+        #expect(old.seedKey == "yatirim-alim" && old.kind == .investment)
+        #expect(entry.kind == .investment)
+        #expect(item.kind == .investment)
+        #expect(returns.name == "Yatırım getirisi")
+        let investments = try f.context.fetch(FetchDescriptor<EntryCategory>()).filter { $0.kind == .investment }
+        #expect(investments.count == 1, "Taşınan kategori varken yenisi eklenmez")
+    }
+
+    @Test("Kullanıcı gelirdeki kategorinin adını değiştirdiyse dokunulmaz")
+    func keepsCustomIncomeName() throws {
+        let returns = EntryCategory(name: "Temettü", icon: "chart", colorHex: "#000", kind: .income, seedKey: "yatirim")
+        f.context.insert(returns)
+        try SeedService.migrateInvestmentCategory(in: f.context)
+        #expect(returns.name == "Temettü")
+    }
 }
+

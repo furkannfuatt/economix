@@ -309,7 +309,7 @@ struct ExtendedCategorizerTests {
         "GARANTI BBVA YATIRIM", "COINBASE", "INTERACTIVE BROKERS",
     ])
     func investments(text: String) {
-        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == "yatirim-gider")
+        #expect(MerchantCategorizer.suggestedSeedKey(for: text) == "yatirim-alim")
     }
 
     @Test("Bilinmeyen işyeri tahmin edilmez", arguments: ["IYZICO/ABC", "XYZ LTD STI", "PAYTR*KUZEY"])

@@ -40,7 +40,7 @@ enum CSVExporter {
     private static func amount(_ entry: LedgerEntry) -> String {
         let minor = entry.amountMinor
         let text = "\(minor / 100)," + String(format: "%02d", minor % 100)
-        return entry.kind == .expense ? "-" + text : text
+        return entry.kind == .expense || entry.kind == .investment ? "-" + text : text
     }
 
     private static func source(_ source: EntrySource) -> String {

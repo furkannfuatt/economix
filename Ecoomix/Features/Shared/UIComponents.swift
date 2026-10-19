@@ -22,6 +22,7 @@ extension Color {
     static let expense = Color(red: 0.90, green: 0.28, blue: 0.30)
     static let income = Color(red: 0.19, green: 0.64, blue: 0.42)
     static let transfer = Color(red: 0.35, green: 0.47, blue: 0.95)
+    static let investment = Color(red: 0.62, green: 0.40, blue: 0.93)
 }
 
 enum Palette {
@@ -131,7 +132,7 @@ struct AmountText: View {
 
     private var text: String {
         switch kind {
-        case .expense: "-" + amount.formatted()
+        case .expense, .investment: "-" + amount.formatted()
         case .income: "+" + amount.formatted()
         case .transfer: amount.formatted()
         }
@@ -141,6 +142,7 @@ struct AmountText: View {
         switch kind {
         case .expense: .primary
         case .income: .income
+        case .investment: .investment
         case .transfer: .secondary
         }
     }

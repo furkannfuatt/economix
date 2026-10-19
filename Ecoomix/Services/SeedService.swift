@@ -28,13 +28,13 @@ enum SeedService {
         .init(key: "bakim", name: "Kişisel Bakım", icon: "sparkles", color: "#FF9F0A", kind: .expense),
         .init(key: "hediye", name: "Hediye", icon: "gift.fill", color: "#FF375F", kind: .expense),
         .init(key: "seyahat", name: "Seyahat", icon: "airplane", color: "#64D2FF", kind: .expense),
-        .init(key: "yatirim-gider", name: "Yatırım", icon: "chart.line.uptrend.xyaxis", color: "#FFD60A", kind: .expense),
         .init(key: "diger-gider", name: "Diğer", icon: "ellipsis.circle.fill", color: "#8E8E93", kind: .expense),
         .init(key: "maas", name: "Maaş", icon: "banknote.fill", color: "#30A46C", kind: .income),
         .init(key: "burs", name: "Burs", icon: "graduationcap.fill", color: "#BF5AF2", kind: .income),
         .init(key: "ek-gelir", name: "Ek Gelir", icon: "plus.circle.fill", color: "#32ADE6", kind: .income),
         .init(key: "freelance", name: "Freelance", icon: "laptopcomputer", color: "#5AC8FA", kind: .income),
-        .init(key: "yatirim", name: "Yatırım", icon: "chart.line.uptrend.xyaxis", color: "#FFB800", kind: .income),
+        .init(key: "yatirim", name: "Yatırım getirisi", icon: "chart.line.uptrend.xyaxis", color: "#FFB800", kind: .income),
+        .init(key: "yatirim-alim", name: "Yatırım", icon: "chart.line.uptrend.xyaxis", color: "#9E66ED", kind: .investment),
         .init(key: "diger-gelir", name: "Diğer", icon: "ellipsis.circle.fill", color: "#8E8E93", kind: .income),
     ]
 
@@ -58,7 +58,27 @@ enum SeedService {
     }
 
     /// İlk sürümden sonra eklenen varsayılan kategoriler.
-    static let addedLater = ["online", "burs", "yatirim-gider"]
+    static let addedLater = ["online", "burs", "yatirim-alim"]
+
+    /// Yatırım önce gider kategorisi olarak eklenmişti; artık ayrı türdür (gider, net ve tasarruf oranına girmez).
+    /// Kategori, kayıtları ve düzenli işlemleri yatırım türüne taşınır; gelirdeki "Yatırım" getiri olarak adlanır.
+    static func migrateInvestmentCategory(in context: ModelContext) throws {
+        let categories = try context.fetch(FetchDescriptor<EntryCategory>())
+        for category in categories where category.seedKey == "yatirim-gider" {
+            category.seedKey = "yatirim-alim"
+            category.kind = .investment
+            category.monthlyLimitMinor = nil
+            for entry in category.entries ?? [] where entry.kind == .expense { entry.kind = .investment }
+            for item in category.recurringItems ?? [] where item.kind == .expense {
+                item.kind = .investment
+                item.isSubscription = false
+            }
+        }
+        for category in categories where category.seedKey == "yatirim" && category.kind == .income && category.name == "Yatırım" {
+            category.name = "Yatırım getirisi"
+        }
+        if context.hasChanges { try context.save() }
+    }
 
     /// Sonradan eklenen varsayılanları mevcut kuruluma bir kez ekler; kullanıcı silerse geri gelmez.
     /// Kurulum yapılmamışsa (hiç varsayılan kategori yoksa) dokunmaz: kurulum hepsini ekler.

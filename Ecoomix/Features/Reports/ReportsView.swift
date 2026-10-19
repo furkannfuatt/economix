@@ -57,6 +57,12 @@ struct ReportsView: View {
                                      tint: summary.net.isNegative ? .expense : .primary,
                                      caption: summary.savingsRate.map { "Tasarruf \(TR.percent($0))" })
                         }
+                        if !summary.investment.isZero {
+                            Label("Yatırıma ayrılan \(summary.investment.formatted(decimals: false)) (gider ve nete dahil değil)",
+                                  systemImage: "chart.line.uptrend.xyaxis")
+                                .font(.caption)
+                                .foregroundStyle(Color.investment)
+                        }
                         if span.rawValue > 1 {
                             Text("Aylık ortalama gider \(summary.expense.scaled(numerator: 1, denominator: span.rawValue).formatted(decimals: false))")
                                 .font(.caption)

@@ -183,7 +183,8 @@ struct ImportView: View {
 
     private func previewView(profile: BankProfile, result: StatementParseResult) -> some View {
         let included = candidates.filter(\.include)
-        let expenseTotal = included.filter { $0.row.kind == .expense }.map(\.row.amount).sum()
+        let expenseTotal = included.filter { $0.row.kind == .expense && $0.category?.kind != .investment }
+            .map(\.row.amount).sum()
 
         return List {
             Section {
@@ -244,7 +245,7 @@ struct ImportView: View {
         let indices = candidates.indices.filter { candidates[$0].status == status }
         if !indices.isEmpty {
             Section {
-                let expenseCategories = categories.filter { $0.kind == .expense }
+                let expenseCategories = categories.filter { $0.kind == .expense || $0.kind == .investment }
                 ForEach(indices, id: \.self) { index in
                     CandidateRow(candidate: $candidates[index], categories: expenseCategories) { category in
                         let others = ImportCandidate.applyCategory(category, at: index, in: &candidates)
@@ -311,7 +312,7 @@ struct ImportView: View {
         let targets = candidates.indices.filter {
             candidates[$0].include && candidates[$0].row.kind == .expense && candidates[$0].category == nil
         }
-        let expenseCategories = categories.filter { $0.kind == .expense }
+        let expenseCategories = categories.filter { $0.kind == .expense || $0.kind == .investment }
         do {
             let mapping = try await GeminiCategorizer(apiKey: key)
                 .categorize(merchants: targets.map { candidates[$0].row.description }, categories: expenseCategories)

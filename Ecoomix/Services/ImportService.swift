@@ -152,7 +152,8 @@ struct ImportService {
             let description = candidates[index].row.description
             candidates[index].category = ledger.learnedCategory(for: description)
                 ?? MerchantCategorizer.suggestedSeedKey(for: description).flatMap { key in
-                    categories.first { $0.seedKey == key && $0.kind == .expense }
+                    // Aracı kurum/kripto alımları yatırım kategorisine düşer.
+                    categories.first { $0.seedKey == key && ($0.kind == .expense || $0.kind == .investment) }
                 }
         }
         return candidates
@@ -202,7 +203,8 @@ struct ImportService {
                                     account: account, merchant: row.description, source: .imported,
                                     importHash: row.importHash)
             case (_, .expense):
-                try ledger.addEntry(amount: row.amount, kind: .expense, date: row.date, category: candidate.category,
+                let kind: TxKind = candidate.category?.kind == .investment ? .investment : .expense
+                try ledger.addEntry(amount: row.amount, kind: kind, date: row.date, category: candidate.category,
                                     account: account, merchant: row.description, source: .imported,
                                     importHash: row.importHash)
                 if let category = candidate.category, candidate.learnsCategory {
@@ -296,7 +298,7 @@ struct ImportService {
 
     private func kindMatches(_ entry: LedgerEntry, _ row: StatementRow) -> Bool {
         switch row.kind {
-        case .expense: entry.kind == .expense
+        case .expense: entry.kind == .expense || entry.kind == .investment
         case .income, .refund, .reward: entry.kind == .income
         case .payment: entry.kind == .transfer
         }

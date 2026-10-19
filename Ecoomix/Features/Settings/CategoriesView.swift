@@ -16,6 +16,7 @@ struct CategoriesView: View {
                 Picker("Tür", selection: $kind) {
                     Text("Gider").tag(TxKind.expense)
                     Text("Gelir").tag(TxKind.income)
+                    Text("Yatırım").tag(TxKind.investment)
                 }
                 .pickerStyle(.segmented)
                 .listRowBackground(Color.clear)

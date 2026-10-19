@@ -15,6 +15,8 @@ struct AIPayloadBuilderTests {
                                   categoryID: "market", accountID: nil, merchant: "Migros Kadıköy",))
             txs.append(TxSnapshot(id: "y\(month)", amount: tl(3_000), kind: .expense, date: d(2026, month, 12),
                                   categoryID: "yemek", accountID: nil, merchant: "Gizli Restoran"))
+            txs.append(TxSnapshot(id: "v\(month)", amount: tl(5_000), kind: .investment, date: d(2026, month, 15),
+                                  categoryID: "yatirim", accountID: nil, merchant: "MIDAS"))
         }
         let plan = PlanSchedule(id: "p", title: "Telefon",
                                 lines: InstallmentScheduler.schedule(total: tl(12_000), count: 4, purchaseDate: d(2026, 9, 1)))
@@ -30,6 +32,7 @@ struct AIPayloadBuilderTests {
         #expect(payload.months.map(\.month) == ["2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"])
         #expect(payload.months.last?.income == 50_000)
         #expect(payload.months.last?.expense == 11_000)
+        #expect(payload.months.last?.investment == 5_000, "Yatırım ayrı; gider ve tasarruf oranına girmez")
         #expect(payload.months.last?.savingsRatePercent == 78)
         #expect(payload.currentMonthDay == 18)
         #expect(payload.currency == "TRY")

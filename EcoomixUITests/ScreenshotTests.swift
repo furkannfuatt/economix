@@ -46,6 +46,21 @@ final class ScreenshotTests: XCTestCase {
 
         tab("Ayarlar")
         snap("11-ayarlar")
+
+        // Kategoriler > Yatırım sekmesi
+        app.buttons["Kategoriler ve bütçeler"].firstMatch.tap()
+        app.buttons["Yatırım"].firstMatch.tap()
+        sleep(1)
+        snap("23-kategoriler-yatirim")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        // Hızlı ekle: yatırım türü
+        app.buttons["İşlem ekle"].firstMatch.tap()
+        if app.buttons["Yatırım"].firstMatch.waitForExistence(timeout: 3) {
+            app.buttons["Yatırım"].firstMatch.tap()
+            sleep(1)
+            snap("24-ekle-yatirim")
+        }
     }
 
     @MainActor

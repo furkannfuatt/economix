@@ -146,5 +146,22 @@ struct ImportServiceTests {
         let rules = try f.context.fetch(FetchDescriptor<MerchantRule>())
         #expect(rules.map(\.pattern) == ["AYSE TEYZE EV YEMEKLERI"])
     }
+
+    @Test("Aracı kurum ve kripto alımları yatırım olarak eklenir; elle girilmiş yatırımla eşleşir")
+    func investmentRows() throws {
+        let card = f.makeCard()
+        let investment = EntryCategory(name: "Yatırım", icon: "chart", colorHex: "#000", kind: .investment, seedKey: "yatirim-alim")
+        f.context.insert(investment)
+        let manual = try LedgerService(context: f.context).addEntry(amount: tl(1_000), kind: .investment, date: d(2026, 10, 2),
+                                                                     category: investment, account: card, merchant: "Midas")
+        let result = try parse([["01.10.2026", "MIDAS MENKUL", "1.000,00"], ["05.10.2026", "BINANCE.COM", "2.500,00"]])
+        let service = ImportService(context: f.context)
+        let candidates = try service.prepare(result, account: card)
+        #expect(candidates[0].status == .possibleDuplicate && candidates[0].matchedEntry === manual)
+        #expect(candidates[1].category === investment)
+        try service.commit(candidates, account: card)
+        let binance = try #require(try f.context.fetch(FetchDescriptor<LedgerEntry>()).first { $0.amountMinor == 2_500_00 })
+        #expect(binance.kind == .investment)
+    }
 }
 
