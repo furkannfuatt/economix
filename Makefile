@@ -55,7 +55,8 @@ screens: generate
 	TEST_RUNNER_IMPORT_AKBANK_PDF="$(CURDIR)/EcoomixUITests/Fixtures/akbank-ornek.pdf" xcodebuild -project Ecoomix.xcodeproj -scheme EcoomixScreens \
 		-derivedDataPath build/DerivedData -destination $(DEST) test
 
-# README görselleri: temiz durum çubuğuyla demo ekranları (açık + koyu) ve kapak (Python + Pillow gerekir)
+# README görselleri: temiz durum çubuğuyla demo ekranları (açık + koyu) ve kapak (Python + Pillow gerekir).
+# Raporlar "Ay" görünümünde açılır (günlük harcama grafiği); yoksa son seçilen dönem hatırlanır.
 readme-images: generate
 	xcrun simctl boot "$(SIM)" 2>/dev/null || true
 	xcrun simctl status_bar "$(SIM)" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
@@ -68,7 +69,7 @@ readme-images: generate
 	            dark:dashboard:ozet-koyu dark:reports:raporlar-koyu dark:transactions:islemler-koyu; do \
 		mode=$${spec%%:*}; rest=$${spec#*:}; tab=$${rest%%:*}; name=$${rest#*:}; \
 		xcrun simctl ui "$(SIM)" appearance $$mode; \
-		xcrun simctl launch --terminate-running-process "$(SIM)" com.furkanfuat.ecoomix -demoData -tab $$tab >/dev/null; \
+		xcrun simctl launch --terminate-running-process "$(SIM)" com.furkanfuat.ecoomix -demoData -tab $$tab -reportRange month >/dev/null; \
 		sleep 5; xcrun simctl io "$(SIM)" screenshot build/readme/$$name.png >/dev/null; \
 	done
 	xcrun simctl ui "$(SIM)" appearance light

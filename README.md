@@ -21,7 +21,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
   <tr>
     <td align="center"><img src="docs/images/ekran-ozet.png" width="200" alt="Özet ekranı"><br><b>Özet</b><br><sub>Aylık net, bütçeler</sub></td>
     <td align="center"><img src="docs/images/ekran-islemler.png" width="200" alt="İşlemler ekranı"><br><b>İşlemler</b><br><sub>Günlere göre, arama ve filtre</sub></td>
-    <td align="center"><img src="docs/images/ekran-raporlar.png" width="200" alt="Raporlar ekranı"><br><b>Raporlar</b><br><sub>Gelir-gider, tasarruf oranı</sub></td>
+    <td align="center"><img src="docs/images/ekran-raporlar.png" width="200" alt="Raporlar ekranı"><br><b>Raporlar</b><br><sub>Günlük, haftalık, aylık harcama</sub></td>
     <td align="center"><img src="docs/images/ekran-dagilim.png" width="200" alt="Harcama dağılımı"><br><b>Harcama dağılımı</b><br><sub>Kategoriler, yaklaşan ödemeler</sub></td>
   </tr>
   <tr>
