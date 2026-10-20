@@ -100,18 +100,18 @@ struct GeminiAdvisorTests {
 @Suite("GeminiKeyProvider")
 @MainActor
 struct GeminiKeyProviderTests {
-    @Test("Uygulamada girilen anahtar dosyadakinden önce gelir")
-    func keychainWins() {
-        #expect(GeminiKeyProvider.resolve(keychain: "AIza-keychain", bundled: "AIza-file") == "AIza-keychain")
+    @Test("Anahtar uygulama paketine gömülmez; yalnızca Keychain'den okunur")
+    func notBundled() {
+        #expect(Bundle.main.object(forInfoDictionaryKey: "GeminiAPIKey") == nil)
     }
 
-    @Test("Uygulamada anahtar yoksa dosyadaki kullanılır")
-    func fallsBackToFile() {
-        #expect(GeminiKeyProvider.resolve(keychain: nil, bundled: "AIza-file") == "AIza-file")
+    @Test("Girilen anahtarın boşlukları temizlenir")
+    func trims() {
+        #expect(GeminiKeyProvider.normalized("  AIza-keychain \n") == "AIza-keychain")
     }
 
-    @Test("Boş ya da doldurulmamış dosya değeri yok sayılır", arguments: ["", "  ", "$(GEMINI_API_KEY)", "BURAYA_ANAHTARINI_YAZ"])
+    @Test("Boş ya da şablon değer yok sayılır", arguments: ["", "  ", "$(GEMINI_API_KEY)", "BURAYA_ANAHTARINI_YAZ"])
     func ignoresPlaceholder(value: String) {
-        #expect(GeminiKeyProvider.resolve(keychain: nil, bundled: value) == nil)
+        #expect(GeminiKeyProvider.normalized(value) == nil)
     }
 }

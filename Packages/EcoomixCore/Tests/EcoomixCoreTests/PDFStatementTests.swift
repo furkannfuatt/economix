@@ -102,6 +102,24 @@ struct PDFStatementTests {
             "99 Eki 9999 XXXX IADE 999,99-",
         ])
     }
+
+    @Test("Biçim örneği: başlık kelimesine bitişik tutar, IBAN, kart no ve yer adları da gizlenir")
+    func maskedStructureHidesAttachedValues() {
+        let masked = StatementStructure.masked(lines: [
+            "TUTAR:1.234,56 TOPLAM:12.345,67TL",
+            "HESAP:TR330006100519786457841326",
+            "KARTNO:5401231234561234",
+            "ISLEM 15/10/2026 KARTAL OCAKBASI KASIMPASA",
+            "İşlem Tarihi Taksitli Ödemeleri TOPLAMLARI",
+        ])
+        #expect(masked == [
+            "TUTAR:9.999,99 TOPLAM:99.999,99TL",
+            "HESAP:XX999999999999999999999999",
+            "XXXXXX:9999999999999999",
+            "ISLEM 99/99/9999 XXXXXX XXXXXXXX XXXXXXXXX",
+            "İşlem Tarihi Taksitli Ödemeleri TOPLAMLARI",
+        ])
+    }
 }
 
 @Suite("Akbank Axess PDF düzeni")

@@ -131,12 +131,11 @@ Eski `.xls` biçimi okunamaz. Dosyayı Numbers'ta açıp CSV ya da .xlsx olarak 
 
 ## Yapay zekâ analizi (Google Gemini)
 
-Anahtarı [aistudio.google.com](https://aistudio.google.com) > **Get API key** üzerinden al. İki yoldan biriyle ver:
+Anahtarı [aistudio.google.com](https://aistudio.google.com) > **Get API key** üzerinden al ve uygulamada **Ayarlar > Yapay zekâ** alanına yaz. Anahtar yalnızca o cihazın Keychain'inde saklanır; uygulama paketine gömülmez, iCloud'a ve yedeklere gitmez. Her kullanıcı kendi anahtarını kullanır.
 
-1. **Dosya (önerilen):** `Config/Secrets.xcconfig` içinde `GEMINI_API_KEY = AIza…` satırını doldur, sonra `make device UDID=…` ile yeniden kur. Bu dosya `.gitignore`'da; git'e girmez. İlk `make generate` onu `Config/Secrets.example.xcconfig` şablonundan oluşturur.
-2. **Uygulama içinden:** **Ayarlar > Yapay zekâ** alanına yaz. Yalnızca bu cihazın Keychain'inde saklanır ve dosyadaki anahtardan önce gelir.
+Google Cloud Console'da anahtarı **Generative Language API** ile sınırlayıp kota koyman önerilir.
 
-Dosya yolunda anahtar uygulama paketine gömülür. Uygulama yalnızca senin telefonunda olduğu için risk düşük; yine de Google Cloud Console'da anahtarı **Generative Language API** ve **iOS uygulaması `com.furkanfuat.ecoomix`** ile sınırlaman önerilir (uygulama `X-Ios-Bundle-Identifier` başlığını gönderir).
+`Config/Secrets.xcconfig` içindeki `GEMINI_API_KEY` yalnızca geliştirici araçları içindir (`make gemini-live`, `scripts/check-gemini.sh`); uygulamaya girmez.
 
 - Analiz yalnızca **Öneriler > Son 6 ayı analiz et** düğmesiyle çalışır. Model düşünerek yanıt verdiği için 1–2 dakika sürebilir.
 - Model: `gemini-3.8-flash` (varsayılan) ya da `gemini-4-argon`. Ayarlar'dan seçilir.

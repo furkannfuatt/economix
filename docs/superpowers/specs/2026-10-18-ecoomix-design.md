@@ -134,7 +134,7 @@ Her kural şu yapıda bir `Insight` döndürür: `severity`, `title`, `message`,
 - Gövde: `systemInstruction`, `contents` (özet JSON), `generationConfig { responseMimeType: application/json, responseJsonSchema, maxOutputTokens }`. (Belgedeki `responseFormat.text.mimeType` biçimi canlı API'de 400 verdiği için kullanılmıyor.)
 - Model: `gemini-3.8-flash` varsayılan, `gemini-4-argon` seçilebilir (Ayarlar).
 - Yanıt: `candidates[0].content.parts` (düşünce parçaları atlanır, kod bloğu ayıklanır); `promptFeedback.blockReason` ve `finishReason` (SAFETY vb. → engellendi, MAX_TOKENS → kesildi) içerikten önce kontrol edilir.
-- Anahtar: önce Keychain (uygulamada girilen), yoksa `Config/Secrets.xcconfig` → Info.plist `GeminiAPIKey` (git'e girmez).
+- Anahtar: yalnızca uygulamada girilen (Keychain, bu cihaz). Uygulama paketine gömülmez; `Config/Secrets.xcconfig` içindeki değer yalnızca `make gemini-live` ve `scripts/check-gemini.sh` içindir.
 - Gönderilen veri ve tetikleme kuralları değişmedi (yalnızca toplulaştırılmış veri, yalnızca düğmeyle).
 
 ### Ekstre içe aktarma (`StatementParser` + `ImportService`)

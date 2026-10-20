@@ -145,8 +145,9 @@ public enum PDFStatementLines {
     }
 }
 
-/// Okuma sorunlarında paylaşılacak gizlenmiş biçim örneği: rakamlar 9, harfler X/x olur;
-/// yalnızca ekstre başlık kelimeleri ve ay adları korunur.
+/// Okuma sorunlarında paylaşılacak gizlenmiş biçim örneği: rakamlar her yerde 9, harfler X/x olur;
+/// yalnızca ekstre başlık kelimeleri ve ay adları korunur. Kelimeye bitişik değerler de gizlenir
+/// ("TUTAR:1.234,56" → "TUTAR:9.999,99", "HESAP:TR33…" → "HESAP:XX99…").
 public enum StatementStructure {
     private static let exactKeywords: Set<String> = [
         "TL", "TRY", "NO", "SON", "OCA", "SUB", "MAR", "NIS", "MAY", "HAZ", "TEM", "AGU", "EYL", "EKI", "KAS", "ARA",
@@ -157,26 +158,45 @@ public enum StatementStructure {
         "OCAK", "SUBAT", "MART", "NISAN", "MAYIS", "HAZIRAN", "TEMMUZ", "AGUSTOS", "EYLUL", "EKIM", "KASIM", "ARALIK",
     ]
 
+    /// Başlık kelimesinin ardından gelebilecek Türkçe ekler ("TARIHI", "ISLEMLER", "TOPLAMLARI").
+    /// Listede olmayan devam, kelimeyi başka bir ad yapar ve gizlenir ("KARTAL", "KASIMPASA", "OCAKBASI").
+    private static let suffixes: Set<String> = [
+        "", "I", "SI", "U", "SU", "LER", "LAR", "LERI", "LARI", "IN", "NIN", "NUN", "UN", "DA", "DE", "TA", "TE", "LI", "LU",
+    ]
+
     public static func masked(lines: [String], limit: Int = 120) -> [String] {
-        lines.prefix(limit).map { line in
-            line.split(separator: " ", omittingEmptySubsequences: false).map { token in
-                isKeyword(String(token)) ? String(token) : mask(String(token))
-            }
-            .joined(separator: " ")
+        lines.prefix(limit).map(maskLine)
+    }
+
+    /// Satır harf dizileri ve tek tek diğer karakterler olarak taranır: rakam → 9, noktalama aynen,
+    /// harf dizisi yalnızca başlık kelimesiyse aynen kalır.
+    private static func maskLine(_ line: String) -> String {
+        var result = ""
+        var word = ""
+        func flushWord() {
+            result += isKeyword(word) ? word : mask(word)
+            word = ""
         }
+        for character in line {
+            if character.isLetter {
+                word.append(character)
+            } else {
+                flushWord()
+                result.append(character.isNumber ? "9" : character)
+            }
+        }
+        flushWord()
+        return result
     }
 
-    private static func isKeyword(_ token: String) -> Bool {
-        let letters = StatementParser.fold(token).filter(\.isLetter)
-        guard !letters.isEmpty else { return false }
-        return exactKeywords.contains(letters) || prefixKeywords.contains { letters.hasPrefix($0) }
+    private static func isKeyword(_ word: String) -> Bool {
+        guard !word.isEmpty else { return false }
+        let folded = StatementParser.fold(word)
+        return exactKeywords.contains(folded)
+            || prefixKeywords.contains { folded.hasPrefix($0) && suffixes.contains(String(folded.dropFirst($0.count))) }
     }
 
-    private static func mask(_ token: String) -> String {
-        String(token.map { character -> Character in
-            if character.isNumber { return "9" }
-            if character.isLetter { return character.isUppercase ? "X" : "x" }
-            return character
-        })
+    private static func mask(_ word: String) -> String {
+        String(word.map { $0.isUppercase ? "X" : "x" })
     }
 }

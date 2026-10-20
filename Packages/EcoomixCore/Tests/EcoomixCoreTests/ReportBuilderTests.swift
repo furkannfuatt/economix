@@ -59,6 +59,17 @@ struct ReportBuilderTests {
         #expect(TxKind.investment.title == "Yatırım")
     }
 
+    @Test("Dev tutarlar toplanırken özet çökmez")
+    func hugeAmountsDoNotCrash() {
+        let huge = Money(minor: 9_000_000_000_000_000_000)
+        let txs = (0..<3).map {
+            TxSnapshot(id: "\($0)", amount: huge, kind: .expense, date: d(2026, 10, 2), categoryID: nil,
+                       accountID: nil, merchant: "X")
+        }
+        #expect(ReportBuilder.summary(txs, in: october).expense == Money(minor: .max))
+        #expect(ReportBuilder.spendingSeries(txs, in: october, by: .week).map(\.amount).sum() == Money(minor: .max))
+    }
+
     @Test("Gelir yoksa tasarruf oranı nil")
     func noIncome() {
         #expect(ReportBuilder.summary([tx(.expense, 100, d(2026, 10, 1))], in: october).savingsRate == nil)

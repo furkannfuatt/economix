@@ -198,8 +198,7 @@ struct AISettingsView: View {
     @AppStorage("aiIncludeMerchants") private var includeMerchants = false
     @AppStorage(GeminiModel.storageKey) private var model = GeminiModel.flash.rawValue
     @State private var key = ""
-    @State private var saved = KeychainStore.read(KeychainStore.geminiKey) != nil
-    private let hasBundledKey = GeminiKeyProvider.bundledKey != nil
+    @State private var saved = GeminiKeyProvider.current != nil
 
     var body: some View {
         Form {
@@ -212,24 +211,21 @@ struct AISettingsView: View {
                         saved = false
                     }
                 } else {
-                    if hasBundledKey {
-                        Label("Derlemeye gömülü anahtar kullanılıyor", systemImage: "doc.badge.gearshape")
-                            .foregroundStyle(ChartPalette.single)
-                    }
-                    SecureField(hasBundledKey ? "Başka bir anahtar gir (isteğe bağlı)" : "AIza…", text: $key)
+                    SecureField("API anahtarı", text: $key)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     Button("Kaydet") {
-                        saved = KeychainStore.save(key.trimmingCharacters(in: .whitespacesAndNewlines),
-                                                   for: KeychainStore.geminiKey)
+                        if let value = GeminiKeyProvider.normalized(key) {
+                            saved = KeychainStore.save(value, for: KeychainStore.geminiKey)
+                        }
                         key = ""
                     }
-                    .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(GeminiKeyProvider.normalized(key) == nil)
                 }
             } header: {
                 Text("Gemini API anahtarı")
             } footer: {
-                Text("aistudio.google.com adresinden alınır. Uygulamada girilen anahtar yalnızca bu cihazın Keychain'inde saklanır ve projedeki Config/Secrets.xcconfig dosyasındaki anahtardan önce gelir.")
+                Text("Kendi anahtarını aistudio.google.com > Get API key üzerinden al. Anahtar yalnızca bu cihazın Keychain'inde saklanır; iCloud'a, yedeklere ve uygulama paketine girmez.")
             }
 
             Section("Model") {

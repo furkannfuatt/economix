@@ -10,26 +10,43 @@ public struct Money: Hashable, Comparable, Sendable, Codable {
 
     public static let zero = Money(minor: 0)
 
+    /// Metinden kabul edilen en büyük tutar: 10 milyar TL. Üstü yazım ya da dosya hatasıdır.
+    public static let maxMagnitude = Money(minor: 1_000_000_000_000)
+
     public var isZero: Bool { minor == 0 }
     public var isNegative: Bool { minor < 0 }
-    public var magnitude: Money { Money(minor: Swift.abs(minor)) }
+    public var magnitude: Money { Money(minor: Int(clamping: minor.magnitude)) }
 
     /// Lira cinsinden ondalık değer (grafikler için).
     public var lira: Double { Double(minor) / 100 }
 
-    public static func + (lhs: Money, rhs: Money) -> Money { Money(minor: lhs.minor + rhs.minor) }
-    public static func - (lhs: Money, rhs: Money) -> Money { Money(minor: lhs.minor - rhs.minor) }
-    public static prefix func - (value: Money) -> Money { Money(minor: -value.minor) }
-    public static func * (lhs: Money, rhs: Int) -> Money { Money(minor: lhs.minor * rhs) }
-    public static func += (lhs: inout Money, rhs: Money) { lhs.minor += rhs.minor }
-    public static func -= (lhs: inout Money, rhs: Money) { lhs.minor -= rhs.minor }
+    // Aritmetik taşmada çökmek yerine ±Int.max'a doyar: bozuk ya da dev bir kayıt uygulamayı her açılışta
+    // çökertmesin. Int.min kullanılmaz; böylece işaret değiştirme ve mutlak değer de güvenli kalır.
+    private static func saturated(_ result: (partialValue: Int, overflow: Bool), positive: Bool) -> Money {
+        guard !result.overflow, result.partialValue != .min else { return Money(minor: positive ? .max : -.max) }
+        return Money(minor: result.partialValue)
+    }
+
+    public static func + (lhs: Money, rhs: Money) -> Money {
+        saturated(lhs.minor.addingReportingOverflow(rhs.minor), positive: rhs.minor > 0)
+    }
+    public static func - (lhs: Money, rhs: Money) -> Money {
+        saturated(lhs.minor.subtractingReportingOverflow(rhs.minor), positive: rhs.minor < 0)
+    }
+    public static prefix func - (value: Money) -> Money { Money(minor: 0) - value }
+    public static func * (lhs: Money, rhs: Int) -> Money {
+        saturated(lhs.minor.multipliedReportingOverflow(by: rhs), positive: (lhs.minor < 0) == (rhs < 0))
+    }
+    public static func += (lhs: inout Money, rhs: Money) { lhs = lhs + rhs }
+    public static func -= (lhs: inout Money, rhs: Money) { lhs = lhs - rhs }
     public static func < (lhs: Money, rhs: Money) -> Bool { lhs.minor < rhs.minor }
 
-    /// Oransal bölme; sonuç en yakın kuruşa yuvarlanır.
+    /// Oransal bölme; sonuç en yakın kuruşa yuvarlanır (Int aralığı dışına çıkarsa sınırlanır).
     public func scaled(numerator: Int, denominator: Int) -> Money {
         precondition(denominator != 0)
-        let value = Double(minor) * Double(numerator) / Double(denominator)
-        return Money(minor: Int(value.rounded(.toNearestOrAwayFromZero)))
+        let value = (Double(minor) * Double(numerator) / Double(denominator)).rounded(.toNearestOrAwayFromZero)
+        guard value.isFinite else { return Money(minor: value < 0 ? -.max : .max) }
+        return Money(minor: Int(exactly: value) ?? (value < 0 ? -.max : .max))
     }
 
     /// Tutarı `count` parçaya böler; kuruş artığı ilk parçaya eklenir.
@@ -52,7 +69,7 @@ extension Money {
     /// "1.234,56 ₺" biçiminde metin.
     public func formatted(decimals: Bool = true) -> String {
         let negative = minor < 0
-        let absolute = Swift.abs(minor)
+        let absolute = magnitude.minor
         var lira = absolute / 100
         let kurus = absolute % 100
         if !decimals, kurus >= 50 { lira += 1 }
@@ -109,7 +126,8 @@ extension Money {
         else { return nil }
 
         guard let (integerPart, fractionPart) = splitNumber(s) else { return nil }
-        guard let lira = Int(integerPart.isEmpty ? "0" : integerPart) else { return nil }
+        // 12 haneden uzun tam kısım zaten sınırın üstünde; çevirmeden reddedilir (taşma olmaz).
+        guard integerPart.count <= 12, let lira = Int(integerPart.isEmpty ? "0" : integerPart) else { return nil }
 
         var kurus = 0
         if !fractionPart.isEmpty {
@@ -117,6 +135,7 @@ extension Money {
             kurus = fractionPart.count == 1 ? f * 10 : f
         }
         let value = lira * 100 + kurus
+        guard value <= maxMagnitude.minor else { return nil }
         return Money(minor: negative ? -value : value)
     }
 

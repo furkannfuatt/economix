@@ -36,7 +36,10 @@ struct RootView: View {
     @Query private var categories: [EntryCategory]
     @State private var router = AppRouter()
     @State private var lock = AppLock()
+    @State private var lockWindow = LockWindowPresenter()
     @State private var bootstrapped = false
+
+    private var showsLock: Bool { lock.isLocked || (scenePhase != .active && lock.isEnabled) }
 
     var body: some View {
         Group {
@@ -46,9 +49,18 @@ struct RootView: View {
                 tabs
             }
         }
+        .accessibilityHidden(showsLock)
+        // Yedek: kilit penceresi açılamazsa ana görünüm yine örtülür.
         .overlay {
-            if lock.isLocked || (scenePhase != .active && lock.isEnabled) {
+            if showsLock {
                 LockScreen { Task { await lock.unlock() } }
+            }
+        }
+        .onChange(of: showsLock, initial: true) { _, shown in
+            if shown {
+                lockWindow.show { Task { await lock.unlock() } }
+            } else {
+                lockWindow.hide()
             }
         }
         .environment(router)

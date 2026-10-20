@@ -41,6 +41,42 @@ struct MoneyTests {
         #expect(Money.parse(text) == nil)
     }
 
+    @Test("10 milyar TL'yi aşan ya da çok uzun tutarlar reddedilir", arguments: [
+        "99999999999999999", "999999999999999999999", "10.000.000.000,01", "-10000000001",
+    ])
+    func parseRejectsHugeAmounts(text: String) {
+        #expect(Money.parse(text) == nil)
+    }
+
+    @Test("Üst sınırdaki tutar kabul edilir")
+    func parseAcceptsLimit() {
+        #expect(Money.parse("10.000.000.000,00") == Money.maxMagnitude)
+        #expect(Money.parse("-10.000.000.000") == -Money.maxMagnitude)
+    }
+
+    @Test("Aritmetik taşmada çökmez, en büyük değere doyar")
+    func saturatingArithmetic() {
+        let max = Money(minor: .max)
+        #expect(max + Money(minor: 1) == max)
+        #expect(-max - Money(minor: 10) == -max)
+        #expect(max * 3 == max)
+        #expect(max * -3 == -max)
+        var total = max
+        total += max
+        #expect(total == max)
+        total -= -max
+        #expect(total == max)
+        #expect([max, max, max].sum() == max)
+        #expect(-Money(minor: .min) == max)
+        #expect(max.scaled(numerator: 10, denominator: 1) == max)
+    }
+
+    @Test("En küçük değer biçimlenirken çökmez")
+    func formatsExtremes() {
+        #expect(Money(minor: .min).formatted().hasPrefix("-"))
+        #expect(Money(minor: .min).magnitude.minor == Int.max)
+    }
+
     @Test("Bölme artığı ilk parçaya eklenir")
     func splitPutsRemainderFirst() {
         let parts = Money(minor: 100_000).split(into: 3)

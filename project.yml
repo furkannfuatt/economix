@@ -49,7 +49,6 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSFaceIDUsageDescription: "Ecoomix'i kilitlemek için Face ID kullanılır."
-        GeminiAPIKey: $(GEMINI_API_KEY)
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:

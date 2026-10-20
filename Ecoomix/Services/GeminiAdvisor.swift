@@ -50,26 +50,20 @@ enum GeminiModel: String, CaseIterable, Identifiable {
     }
 }
 
-/// Anahtarın kaynağı: önce uygulamada girilen (Keychain), yoksa Config/Secrets.xcconfig'ten gömülen.
+/// Anahtar yalnızca uygulamada girilir ve bu cihazın Keychain'inde durur. Uygulama paketine gömülmez:
+/// paketteki bir anahtarı uygulamayı edinen herkes çıkarıp kullanabilir.
 enum GeminiKeyProvider {
-    static let infoKey = "GeminiAPIKey"
     private static let placeholders: Set<String> = ["BURAYA_ANAHTARINI_YAZ"]
 
-    static func resolve(keychain: String?, bundled: String?) -> String? {
-        func clean(_ value: String?) -> String? {
-            guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty,
-                  !value.hasPrefix("$("), !placeholders.contains(value) else { return nil }
-            return value
-        }
-        return clean(keychain) ?? clean(bundled)
-    }
-
-    static var bundledKey: String? {
-        resolve(keychain: nil, bundled: Bundle.main.object(forInfoDictionaryKey: infoKey) as? String)
+    /// Boşlukları temizler; boş ya da doldurulmamış şablon değerini yok sayar.
+    static func normalized(_ value: String?) -> String? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty,
+              !value.hasPrefix("$("), !placeholders.contains(value) else { return nil }
+        return value
     }
 
     static var current: String? {
-        resolve(keychain: KeychainStore.read(KeychainStore.geminiKey), bundled: bundledKey)
+        normalized(KeychainStore.read(KeychainStore.geminiKey))
     }
 }
 
