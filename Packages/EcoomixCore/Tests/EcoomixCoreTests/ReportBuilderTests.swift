@@ -102,6 +102,139 @@ struct ReportBuilderTests {
         #expect(series.map(\.income) == [.zero, .zero, tl(1_000)])
     }
 
+    @Test("Aylık toplamlar isteğe bağlı aralıkla kırpılır")
+    func monthlyClipped() {
+        let txs = [tx(.expense, 100, d(2026, 9, 5)), tx(.expense, 200, d(2026, 9, 20)), tx(.expense, 300, d(2026, 10, 25))]
+        let months = [YearMonth(year: 2026, month: 9), YearMonth(year: 2026, month: 10)]
+        let clipped = ReportBuilder.monthlyTotals(txs, months: months, in: DatePeriod(start: d(2026, 9, 15), end: d(2026, 10, 20)))
+        #expect(clipped.map(\.expense) == [tl(200), .zero])
+    }
+
+    @Test("Harcama serisi: günlük kovalar boşları sıfırla doldurur, yalnız gider sayılır")
+    func dailySeries() {
+        let txs = [
+            tx(.expense, 100, d(2026, 10, 3, hour: 10)),
+            tx(.expense, 50, d(2026, 10, 3, hour: 20)),
+            tx(.income, 9_000, d(2026, 10, 3)),
+            tx(.investment, 700, d(2026, 10, 4)),
+            tx(.transfer, 300, d(2026, 10, 5)),
+            tx(.expense, 25, d(2026, 10, 31, hour: 23)),
+            tx(.expense, 999, d(2026, 11, 1)),
+        ]
+        let series = ReportBuilder.spendingSeries(txs, in: october, by: .day)
+        #expect(series.count == 31)
+        #expect(series[2].period == DatePeriod(start: d(2026, 10, 3), end: d(2026, 10, 4)))
+        #expect(series[2].amount == tl(150))
+        #expect(series[2].count == 2)
+        #expect(series[3].amount == .zero)
+        #expect(series.last?.amount == tl(25))
+        #expect(series.map(\.amount).sum() == ReportBuilder.summary(txs, in: october).expense)
+    }
+
+    @Test("Haftalık kovalar pazartesi başlar, dönem sınırında kırpılır")
+    func weeklySeries() {
+        // Ekim 2026: 1'i perşembe.
+        let txs = [
+            tx(.expense, 100, d(2026, 10, 1)),
+            tx(.expense, 200, d(2026, 10, 4, hour: 23)),
+            tx(.expense, 300, d(2026, 10, 5)),
+            tx(.expense, 400, d(2026, 10, 31)),
+            tx(.expense, 999, d(2026, 11, 1)),
+        ]
+        let series = ReportBuilder.spendingSeries(txs, in: october, by: .week)
+        #expect(series.map(\.period.start) == [d(2026, 10, 1), d(2026, 10, 5), d(2026, 10, 12), d(2026, 10, 19), d(2026, 10, 26)])
+        #expect(series.first?.period.end == d(2026, 10, 5))
+        #expect(series.last?.period.end == d(2026, 11, 1))
+        #expect(series.map(\.amount) == [tl(300), tl(300), .zero, .zero, tl(400)])
+    }
+
+    @Test("Aylık kovalar bütçe ayı sınırlarını izler")
+    func monthlySeries() {
+        let payday = MonthRule(startDay: 23)
+        let period = DatePeriod(start: d(2026, 9, 10), end: d(2026, 11, 5))
+        let txs = [
+            tx(.expense, 100, d(2026, 9, 22)),
+            tx(.expense, 200, d(2026, 9, 23)),
+            tx(.expense, 300, d(2026, 10, 23)),
+            tx(.expense, 50, d(2026, 11, 4)),
+        ]
+        let series = ReportBuilder.spendingSeries(txs, in: period, by: .month, rule: payday)
+        #expect(series.map(\.period) == [
+            DatePeriod(start: d(2026, 9, 10), end: d(2026, 9, 23)),
+            DatePeriod(start: d(2026, 9, 23), end: d(2026, 10, 23)),
+            DatePeriod(start: d(2026, 10, 23), end: d(2026, 11, 5)),
+        ])
+        #expect(series.map(\.amount) == [tl(100), tl(200), tl(350)])
+    }
+
+    @Test("Kümülatif harcama artarak toplam gidere ulaşır; asOf sonrası günler yok")
+    func cumulative() {
+        let txs = [
+            tx(.expense, 100, d(2026, 10, 2)),
+            tx(.expense, 50, d(2026, 10, 4)),
+            tx(.income, 1_000, d(2026, 10, 4)),
+            tx(.expense, 70, d(2026, 10, 20)),
+        ]
+        let full = ReportBuilder.cumulativeSpending(txs, in: october)
+        #expect(full.count == 31)
+        #expect(full.map(\.amount).prefix(4) == [.zero, tl(100), tl(100), tl(150)])
+        #expect(full.last?.amount == tl(220))
+
+        let partial = ReportBuilder.cumulativeSpending(txs, in: october, asOf: d(2026, 10, 10, hour: 12))
+        #expect(partial.count == 10)
+        #expect(partial.last?.day == d(2026, 10, 10))
+        #expect(partial.last?.amount == tl(150))
+    }
+
+    @Test("Önceki dönemle kıyas: devam eden dönemde aynı güne kadar, biten dönemde tamamıyla")
+    func pace() {
+        let previousTxs = [tx(.expense, 100, d(2026, 9, 2)), tx(.expense, 300, d(2026, 9, 20))]
+        let september = DatePeriod(month: YearMonth(year: 2026, month: 9))
+        let previous = ReportBuilder.cumulativeSpending(previousTxs, in: september)
+        let txs = [tx(.expense, 150, d(2026, 10, 3)), tx(.expense, 500, d(2026, 10, 25))]
+
+        let ongoing = ReportBuilder.cumulativeSpending(txs, in: october, asOf: d(2026, 10, 10))
+        let paced = SpendingPace(current: ongoing, previous: previous, periodDays: 31)
+        #expect(paced?.current == tl(150))
+        #expect(paced?.previous == tl(100))
+        #expect(paced?.isPartial == true)
+        #expect(paced?.change == 0.5)
+
+        let finished = SpendingPace(current: ReportBuilder.cumulativeSpending(txs, in: october), previous: previous, periodDays: 31)
+        #expect(finished?.current == tl(650))
+        #expect(finished?.previous == tl(400))
+        #expect(finished?.isPartial == false)
+
+        #expect(SpendingPace(current: ongoing, previous: [], periodDays: 31) == nil)
+        #expect(SpendingPace(current: ongoing, previous: ReportBuilder.cumulativeSpending([], in: september), periodDays: 31)?.change == nil)
+    }
+
+    @Test("Haftanın günleri: toplam, gün sayısına bölünmüş ortalama, asOf kırpması")
+    func weekdays() {
+        // Ekim 2026: pazartesiler 5, 12, 19, 26; perşembeler 1, 8, 15, 22, 29.
+        let txs = [
+            tx(.expense, 400, d(2026, 10, 5)),
+            tx(.expense, 200, d(2026, 10, 12)),
+            tx(.expense, 600, d(2026, 10, 26)),
+            tx(.expense, 90, d(2026, 10, 1)),
+            tx(.income, 5_000, d(2026, 10, 5)),
+        ]
+        let all = ReportBuilder.weekdayAverages(txs, in: october)
+        #expect(all.map(\.index) == Array(0..<7))
+        #expect(all[0].total == tl(1_200))
+        #expect(all[0].dayCount == 4)
+        #expect(all[0].average == tl(300))
+        #expect(all[3].total == tl(90))
+        #expect(all[3].dayCount == 5)
+        #expect(all.map(\.dayCount).reduce(0, +) == 31)
+        #expect(all[0].shortTitle == "Pzt" && all[6].title == "Pazar")
+
+        let early = ReportBuilder.weekdayAverages(txs, in: october, asOf: d(2026, 10, 14))
+        #expect(early[0].total == tl(600))
+        #expect(early[0].dayCount == 2)
+        #expect(early.map(\.dayCount).reduce(0, +) == 14)
+    }
+
     @Test("Kategori trendi")
     func trend() {
         let txs = [

@@ -28,14 +28,6 @@ final class ScreenshotTests: XCTestCase {
             app.navigationBars.buttons.firstMatch.tap()
         }
 
-        tab("Raporlar")
-        app.swipeUp()
-        snap("06-raporlar-oran")
-        app.swipeUp()
-        snap("07-raporlar-kategoriler")
-        app.swipeUp()
-        snap("08-raporlar-isyerleri")
-
         tab("Ödemeler")
         app.swipeUp()
         snap("09-taksitler-liste")
@@ -61,6 +53,65 @@ final class ScreenshotTests: XCTestCase {
             sleep(1)
             snap("24-ekle-yatirim")
         }
+    }
+
+    /// Raporlar: her dönem türü, haftalık gruplama, döküm listesi ve alttaki grafik kartları.
+    @MainActor
+    func testCaptureReports() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-demoData", "-tab", "reports"]
+        app.launch()
+        sleep(3)
+        func snap(_ name: String) { capture(name) }
+        func range(_ title: String) {
+            for _ in 0..<8 where !app.buttons[title].firstMatch.isHittable { app.swipeDown() }
+            app.buttons[title].firstMatch.tap()
+            sleep(1)
+        }
+
+        range("6 Ay")
+        snap("30-rapor-6ay")
+        for name in ["31-rapor-6ay-kumulatif", "32-rapor-6ay-gelir-gider", "33-rapor-6ay-kategoriler",
+                     "34-rapor-6ay-haftanin-gunleri", "35-rapor-6ay-isyerleri"] {
+            app.swipeUp()
+            snap(name)
+        }
+
+        range("Ay")
+        snap("36-rapor-ay")
+        app.buttons["Haftalık"].firstMatch.tap()
+        sleep(1)
+        snap("37-rapor-ay-haftalik")
+        app.buttons["Dökümü göster"].firstMatch.tap()
+        sleep(1)
+        app.swipeUp()
+        snap("38-rapor-ay-dokum")
+        app.swipeUp()
+        snap("39-rapor-ay-kumulatif")
+
+        range("Hafta")
+        snap("40-rapor-hafta")
+        app.swipeUp()
+        snap("41-rapor-hafta-kumulatif")
+
+        range("Özel")
+        snap("42-rapor-ozel")
+        app.swipeUp()
+        snap("43-rapor-ozel-alt")
+
+        range("Yıl")
+        snap("44-rapor-yil")
+        app.swipeUp()
+        snap("45-rapor-yil-alt")
+
+        // Kategori ayrıntısı seçili dönemin işlemlerini listeler.
+        let market = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Market")).firstMatch
+        for _ in 0..<6 where !market.isHittable { app.swipeUp() }
+        market.tap()
+        sleep(1)
+        snap("46-rapor-kategori")
+        app.swipeUp()
+        snap("47-rapor-kategori-islemler")
     }
 
     @MainActor

@@ -114,7 +114,7 @@ struct DashboardView: View {
             Card("Harcama dağılımı", trailing: AnyView(
                 Button("Raporlar") { router.tab = .reports }.font(.subheadline)
             )) {
-                CategoryDonut(totals: totals, data: data)
+                CategoryDonut(totals: totals, categories: data.categories)
             }
         }
     }
@@ -198,7 +198,7 @@ struct BudgetRow: View {
 /// Kategori halka grafiği: ilk 5 kategori + "Diğer"; renk kategoriye aittir, lejant tutarlarla birlikte.
 struct CategoryDonut: View {
     let totals: [CategoryTotal]
-    let data: FinanceSnapshot
+    let categories: [EntryCategory]
     @State private var selected: Double?
 
     private struct Slice: Identifiable {
@@ -212,7 +212,7 @@ struct CategoryDonut: View {
 
     private var slices: [Slice] {
         let top = totals.prefix(5).map { total -> Slice in
-            let category = data.category(id: total.categoryID)
+            let category = total.categoryID.flatMap { id in categories.first { $0.id.uuidString == id } }
             return Slice(id: total.categoryID ?? "none", name: category?.name ?? "Kategorisiz", amount: total.amount,
                          share: total.share, color: Color(hex: category?.colorHex ?? "#8E8E93"),
                          icon: category?.icon ?? "questionmark")

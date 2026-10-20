@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Charts
 import EcoomixCore
 
 /// Grafik renkleri — dataviz doğrulayıcısından geçmiş açık/koyu adımlar.
@@ -35,6 +36,34 @@ enum ChartFormat {
         return rounded == rounded.rounded()
             ? String(Int(rounded))
             : String(format: "%.1f", rounded).replacingOccurrences(of: ".", with: ",")
+    }
+}
+
+enum ChartAxes {
+    /// En fazla `maxCount` eşit aralıklı etiket konumu. Sağ kenara alanın `edgeFraction` kadarından yakın olanlar
+    /// atlanır; orada etiket taşar ve kesilir ("26…").
+    static func labelDates(_ dates: [Date], domain: ClosedRange<Date>, maxCount: Int, edgeFraction: Double = 0.08) -> [Date] {
+        let step = max(1, Int((Double(dates.count) / Double(maxCount)).rounded(.up)))
+        let width = domain.upperBound.timeIntervalSince(domain.lowerBound)
+        let limit = domain.upperBound.addingTimeInterval(-width * edgeFraction)
+        return stride(from: 0, to: dates.count, by: step).map { dates[$0] }.filter { $0 <= limit }
+    }
+
+    /// Çizginin üstündeki küçük etiket ("Ort. 2.589 ₺"); çubukların üstüne denk gelse de okunur.
+    static func lineLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+            .background(Color(.secondarySystemGroupedBackground).opacity(0.85), in: .capsule)
+    }
+
+    /// Soldaki para ekseni: "12,5 B" etiketleri, silik ızgara.
+    static func money() -> some AxisContent {
+        AxisMarks(position: .leading) { value in
+            AxisGridLine().foregroundStyle(Color.secondary.opacity(0.15))
+            AxisValueLabel { Text(ChartFormat.axis(value.as(Double.self) ?? 0)) }
+        }
     }
 }
 

@@ -43,7 +43,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 
 - **Özet:** aylık net, bütçeler, kategori dağılımı, yaklaşan ödemeler, tasarruf önerileri
 - **İşlemler:** hızlı ekleme; kredi kartında 2–24 taksit; arama ve filtre
-- **Raporlar:** 1/3/6/12 aylık gelir-gider, tasarruf oranı, kategori trendi, en çok harcanan yerler. Taksitler için iki görünüm var: "Aylık yük" (taksitler aylara yayılır) ve "Satın alma" (alım ayında tek tutar).
+- **Raporlar:** hafta, 1/3/6/12 ay ya da başlangıç–bitiş tarihi seçilen özel aralık. Harcama günlük/haftalık/aylık çubuk grafikte ortalama çizgisi ve tutar dökümüyle; kümülatif harcama önceki dönemin aynı günüyle kıyaslanır. Gelir-gider, tasarruf oranı, kategori pasta grafiği ve trendi, haftanın günlerine göre ortalama harcama, en çok harcanan yerler. Taksitler için iki görünüm var: "Aylık yük" (taksitler aylara yayılır) ve "Satın alma" (alım ayında tek tutar).
 - **Ödemeler:** taksit planları ve önümüzdeki 12 ayın yükü, abonelikler ve düzenli ödemeler, kart ekstre durumu
 - **Bildirimler:** bütçe %80/%100, kart son ödeme, abonelik yenileme, aylık özet
 - **Yatırım:** gelir ve giderin yanında ayrı işlem türü. Yatırıma ayrılan para gider sayılmaz; bütçelere, nete ve tasarruf oranına girmez, Özet ve Raporlar'da ayrı gösterilir. Kartla yapılan yatırım alımı kart borcuna eklenir.

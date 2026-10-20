@@ -72,6 +72,11 @@ enum TR {
         date.formatted(style(.dateTime.day().month(.wide)))
     }
 
+    /// "18 Eki"
+    static func dayShortMonth(_ date: Date) -> String {
+        date.formatted(style(.dateTime.day().month(.abbreviated)))
+    }
+
     static func percent(_ value: Double) -> String {
         "%" + String(Int((value * 100).rounded()))
     }
@@ -179,6 +184,7 @@ struct StatTile: View {
     let value: Money
     var tint: Color = .primary
     var caption: String?
+    var captionTint: Color = .secondary
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -195,7 +201,7 @@ struct StatTile: View {
             if let caption {
                 Text(caption)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(captionTint)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
