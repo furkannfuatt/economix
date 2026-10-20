@@ -9,10 +9,22 @@ final class AppLock {
     var isLocked: Bool
 
     init() {
-        isLocked = UserDefaults.standard.bool(forKey: Self.enabledKey)
+        isLocked = Self.storedFlag(Self.enabledKey)
     }
 
-    var isEnabled: Bool { UserDefaults.standard.bool(forKey: Self.enabledKey) }
+    var isEnabled: Bool { Self.storedFlag(Self.enabledKey) }
+
+    /// Ayar yalnızca uygulamanın kendi kaydından okunur. `UserDefaults.bool` başlatma argümanlarını da okur;
+    /// böylece cihaza bağlı bir bilgisayardan `-appLockEnabled NO` ile açılan uygulama kilidi atlardı.
+    static func storedFlag(_ key: String, in defaults: UserDefaults = .standard,
+                           domain: String = Bundle.main.bundleIdentifier ?? "") -> Bool {
+        defaults.persistentDomain(forName: domain)?[key] as? Bool ?? false
+    }
+
+    /// Cihazda parola yoksa kimlik doğrulanamaz; kilit de koruma sağlamaz (Ayarlar bunu gösterir).
+    static var isAvailable: Bool {
+        LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: nil)
+    }
 
     func lockIfNeeded() {
         if isEnabled { isLocked = true }
@@ -20,14 +32,20 @@ final class AppLock {
 
     func unlock() async {
         guard isLocked else { return }
+        // Kilit açıkken cihaz parolası kaldırıldıysa doğrulama imkânsızdır; kullanıcı kendi verisine
+        // erişemez hâle gelmesin diye açılır. Ayarlar'da kilidin çalışmadığı uyarısı görünür.
+        guard Self.isAvailable else {
+            isLocked = false
+            return
+        }
         if await Self.authenticate(reason: "Ecoomix'i açmak için kimliğini doğrula") { isLocked = false }
     }
 
-    /// Face ID / Touch ID, olmazsa cihaz parolası.
+    /// Face ID / Touch ID, olmazsa cihaz parolası. Doğrulama yapılamıyorsa (cihaz parolası yok) false.
     static func authenticate(reason: String) async -> Bool {
         let context = LAContext()
         var error: NSError?
-        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else { return true }
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else { return false }
         return (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)) ?? false
     }
 }

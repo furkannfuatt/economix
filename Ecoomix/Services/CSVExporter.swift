@@ -11,25 +11,38 @@ enum CSVExporter {
                 date(entry.date),
                 entry.kind.title,
                 amount(entry),
-                entry.category?.name ?? "",
-                entry.account?.name ?? "",
-                entry.toAccount?.name ?? "",
-                entry.merchant,
-                entry.note,
-                entry.installmentLabel ?? "",
+                neutralized(entry.category?.name ?? ""),
+                neutralized(entry.account?.name ?? ""),
+                neutralized(entry.toAccount?.name ?? ""),
+                neutralized(entry.merchant),
+                neutralized(entry.note),
+                neutralized(entry.installmentLabel ?? ""),
                 source(entry.source),
             ].map(escape).joined(separator: ";")
         }
         return "\u{FEFF}" + ([header.joined(separator: ";")] + lines).joined(separator: "\r\n") + "\r\n"
     }
 
-    /// Paylaşım için geçici dosya: "ecoomix-islemler-2026-10-18.csv"
+    private static let filePrefix = "ecoomix-islemler-"
+
+    /// Paylaşım için geçici dosya: "ecoomix-islemler-2026-10-18.csv". Cihaz kilitliyken okunamaz;
+    /// önceki dışa aktarmalardan kalanlar önce silinir.
     static func writeTemporaryFile(for entries: [LedgerEntry]) throws -> URL {
+        removeTemporaryFiles()
         let c = FinanceCalendar.calendar.dateComponents([.year, .month, .day], from: .now)
-        let name = String(format: "ecoomix-islemler-%04d-%02d-%02d.csv", c.year!, c.month!, c.day!)
+        let name = String(format: "\(filePrefix)%04d-%02d-%02d.csv", c.year!, c.month!, c.day!)
         let url = URL.temporaryDirectory.appending(path: name)
-        try csv(for: entries).write(to: url, atomically: true, encoding: .utf8)
+        try Data(csv(for: entries).utf8).write(to: url, options: [.atomic, .completeFileProtection])
         return url
+    }
+
+    /// Geçici klasördeki dışa aktarma dosyalarını siler.
+    static func removeTemporaryFiles() {
+        let directory = URL.temporaryDirectory
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        for name in names where name.hasPrefix(filePrefix) && name.hasSuffix(".csv") {
+            try? FileManager.default.removeItem(at: directory.appending(path: name))
+        }
     }
 
     private static func date(_ date: Date) -> String {
@@ -50,6 +63,13 @@ enum CSVExporter {
         case .recurring: "Düzenli"
         case .installment: "Taksit"
         }
+    }
+
+    /// Excel ve benzerleri =, +, -, @ (ve sekme, satır başı) ile başlayan hücreyi formül sayar. İçe aktarılan
+    /// bir işyeri adı ("=HYPERLINK(…)") dosya açılınca çalışmasın diye metin alanlarının başına ' eklenir.
+    private static func neutralized(_ field: String) -> String {
+        guard let first = field.unicodeScalars.first, "=+-@\t\r".unicodeScalars.contains(first) else { return field }
+        return "'" + field
     }
 
     private static func escape(_ field: String) -> String {

@@ -352,6 +352,11 @@ struct ImportView: View {
         copiedSample = false
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
+        // Ekstreler birkaç MB'tır; çok büyük bir dosya belleği doldurup uygulamayı kilitlemesin.
+        if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > ImportLimits.maxFileBytes {
+            error = "Dosya çok büyük (en fazla \(ImportLimits.maxFileBytes / 1_048_576) MB). Bankanın ekstre dosyasını seç."
+            return
+        }
         do {
             let data = try Data(contentsOf: url)
             let rows: [[String]]
@@ -368,6 +373,8 @@ struct ImportView: View {
                 rows = CSVReader.rows(from: Self.decodeText(data))
             }
             parse(rows: rows, fileName: url.lastPathComponent, columns: nil)
+        } catch XLSXReader.ReadError.tooLarge {
+            error = "Excel dosyası bozuk ya da bir ekstre için fazla büyük (en fazla \(ImportLimits.maxRows) satır, \(ImportLimits.maxColumns) kolon)."
         } catch {
             self.error = "Dosya okunamadı: \(error.localizedDescription)"
         }

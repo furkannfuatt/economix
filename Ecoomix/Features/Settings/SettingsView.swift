@@ -5,6 +5,7 @@ import EcoomixCore
 struct SettingsView: View {
     @AppStorage(AppLock.enabledKey) private var appLockEnabled = false
     @AppStorage(MonthSettings.key) private var monthStartDay = 1
+    @State private var lockAvailable = AppLock.isAvailable
 
     private var monthFooter: String {
         let rule = MonthRule(startDay: monthStartDay)
@@ -70,6 +71,16 @@ struct SettingsView: View {
                     Toggle(isOn: Binding(get: { appLockEnabled }, set: { newValue in setAppLock(newValue) })) {
                         Label("Face ID ile kilitle", systemImage: "faceid")
                     }
+                    // Cihaz parolası yokken kilit açılamaz; açık kalmışsa çalışmadığı söylenir.
+                    .disabled(!lockAvailable && !appLockEnabled)
+                    if !lockAvailable {
+                        Label(appLockEnabled
+                              ? "Kilit şu an çalışmıyor: cihazda parola yok. Ayarlar > Face ID ve Parola'dan parola belirle."
+                              : "Kilit için cihazda parola olmalı. Ayarlar > Face ID ve Parola'dan belirleyebilirsin.",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
                     NavigationLink {
                         ExportView()
                     } label: {
@@ -87,6 +98,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Ayarlar")
+            .onAppear { lockAvailable = AppLock.isAvailable }
         }
     }
 }
@@ -133,6 +145,11 @@ struct ExportView: View {
             } catch {
                 self.error = "Dosya oluşturulamadı: \(error.localizedDescription)"
             }
+        }
+        // Tüm işlemlerin düz metin kopyası geçici klasörde kalmasın.
+        .onDisappear {
+            CSVExporter.removeTemporaryFiles()
+            file = nil
         }
     }
 }

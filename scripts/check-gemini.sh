@@ -23,8 +23,9 @@ BODY='{
     }
   }
 }'
-curl -sS -w '\nHTTP %{http_code}\n' \
-  -H "x-goog-api-key: $KEY" \
+# Anahtar komut satırında değil, curl'e standart girişten ayar olarak verilir: çalışırken `ps` ile
+# süreç listesinde görünmez (printf zsh'ın kendi komutudur, ayrı süreç açmaz).
+printf 'header = "x-goog-api-key: %s"\n' "$KEY" | curl -sS -w '\nHTTP %{http_code}\n' --config - \
   -H "X-Ios-Bundle-Identifier: com.furkanfuat.ecoomix" \
   -H "Content-Type: application/json" \
   -d "$BODY" \

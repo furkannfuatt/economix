@@ -5,6 +5,8 @@ import CoreXLSX
 public enum XLSXReader {
     public enum ReadError: Error {
         case noWorksheet
+        /// Satır ya da kolon numarası sınırın dışında (bozuk ya da kötü niyetli dosya).
+        case tooLarge
     }
 
     public static func rows(from data: Data) throws -> [[String]] {
@@ -17,12 +19,16 @@ public enum XLSXReader {
         let worksheet = try file.parseWorksheet(at: path)
         var result: [[String]] = []
         for row in worksheet.data?.rows ?? [] {
-            // Atlanan satırlar boş satır olarak eklenir (r numaraları 1'den başlar).
-            while result.count < Int(row.reference) - 1 { result.append([]) }
+            // Atlanan satırlar boş satır olarak eklenir. Numara dosyadan gelir; sınır olmadan
+            // r="2000000000" gibi bir değer milyarlarca boş satır üretirdi.
+            guard let rowIndex = rowIndex(row.reference) else { throw ReadError.tooLarge }
+            while result.count < rowIndex { result.append([]) }
 
             var cells: [String] = []
             for cell in row.cells {
-                let column = columnIndex(cell.reference.column.value)
+                guard let column = columnIndex(cell.reference.column.value), column < ImportLimits.maxColumns else {
+                    throw ReadError.tooLarge
+                }
                 while cells.count < column { cells.append("") }
                 let raw = sharedStrings.flatMap { cell.stringValue($0) } ?? cell.inlineString?.text ?? cell.value ?? ""
                 cells.append(normalizedNumber(raw).trimmingCharacters(in: .whitespacesAndNewlines))
@@ -33,9 +39,17 @@ public enum XLSXReader {
         return result
     }
 
-    /// "A" → 0, "C" → 2, "AA" → 26
-    static func columnIndex(_ letters: String) -> Int {
-        letters.unicodeScalars.reduce(0) { $0 * 26 + Int($1.value) - 64 } - 1
+    /// "A" → 0, "C" → 2, "AA" → 26. En fazla 3 büyük harf (Excel'in son kolonu XFD); fazlası ya da
+    /// harf dışı karakter nil (uzun bir harf dizisi aksi hâlde Int taşmasıyla çökertirdi).
+    static func columnIndex(_ letters: String) -> Int? {
+        let scalars = Array(letters.unicodeScalars)
+        guard (1...3).contains(scalars.count), scalars.allSatisfy({ ("A"..."Z").contains($0) }) else { return nil }
+        return scalars.reduce(0) { $0 * 26 + Int($1.value) - 64 } - 1
+    }
+
+    /// Dosyadaki 1 tabanlı satır numarası → 0 tabanlı sıra; 0 ya da sınırın üstü nil.
+    static func rowIndex(_ reference: UInt) -> Int? {
+        (1...UInt(ImportLimits.maxRows)).contains(reference) ? Int(reference) - 1 : nil
     }
 
     /// Excel'in kayan nokta artığını ("1234.5599999999999") iki haneye yuvarlar.

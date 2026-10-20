@@ -29,6 +29,27 @@ struct XLSXReaderTests {
         #expect(result.rows[2].installment == InstallmentMarker(current: 2, total: 6))
     }
 
+    @Test("Kolon harfleri: en fazla 3 büyük harf (Excel'in son kolonu XFD)", arguments: [
+        ("A", 0), ("C", 2), ("Z", 25), ("AA", 26), ("XFD", 16_383),
+    ])
+    func columnLetters(letters: String, index: Int) {
+        #expect(XLSXReader.columnIndex(letters) == index)
+    }
+
+    @Test("Geçersiz ya da aşırı uzun kolon harfi reddedilir", arguments: ["", "a", "A1", "ABCD", "ZZZZZZZZZZZZZZZZ"])
+    func rejectsColumnLetters(letters: String) {
+        #expect(XLSXReader.columnIndex(letters) == nil)
+    }
+
+    @Test("Satır numarası 1 ile sınır arasında olmalı")
+    func rowNumbers() {
+        #expect(XLSXReader.rowIndex(1) == 0)
+        #expect(XLSXReader.rowIndex(UInt(ImportLimits.maxRows)) == ImportLimits.maxRows - 1)
+        #expect(XLSXReader.rowIndex(0) == nil)
+        #expect(XLSXReader.rowIndex(UInt(ImportLimits.maxRows) + 1) == nil)
+        #expect(XLSXReader.rowIndex(.max) == nil)
+    }
+
     @Test("XLSX olmayan veri hata verir")
     func rejectsGarbage() {
         #expect(throws: (any Error).self) { try XLSXReader.rows(from: Data("merhaba".utf8)) }
