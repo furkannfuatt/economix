@@ -2,7 +2,7 @@
 import AppKit
 
 let size = 1024.0
-let output = "Ecoomix/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+let output = "Economix/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
 let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size), pixelsHigh: Int(size), bitsPerSample: 8,
                            samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,

@@ -1,7 +1,7 @@
-# Ecoomix
+# Economix
 
 <p align="center">
-  <img src="docs/images/banner.png" alt="Ecoomix: kişisel gelir-gider, taksit ve abonelik takibi" width="100%">
+  <img src="docs/images/banner.png" alt="Economix: kişisel gelir-gider, taksit ve abonelik takibi" width="100%">
 </p>
 
 <p align="center">
@@ -57,14 +57,14 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 - Xcode 26.5+, iOS 26 cihaz/simülatör
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen). `Makefile`, `~/.local/share/xcodegen-dist/bin/xcodegen` yolunu kullanır. Farklı bir kurulum için: `make XCODEGEN=xcodegen …`
 - Ücretli Apple Developer hesabı (iCloud/CloudKit için gerekli). Takım kimliğini `Config/Secrets.xcconfig` içindeki `DEVELOPMENT_TEAM`'e yaz; bu dosya git'e girmez.
-- Kendi hesabınla derlerken paket kimliğini (`project.yml` > `bundleIdPrefix`) ve iCloud kapsayıcısını (`project.yml` entitlements ile `ModelContainerFactory.swift`) kendine göre değiştir; `com.furkanfuat.ecoomix` yalnızca bu projenin sahibine aittir.
+- Kendi hesabınla derlerken paket kimliğini (`project.yml` > `bundleIdPrefix`) ve iCloud kapsayıcısını (`project.yml` entitlements ile `ModelContainerFactory.swift`) kendine göre değiştir; `com.furkanfuat.economix` yalnızca bu projenin sahibine aittir.
 
 ## Komutlar
 
 | Komut | Ne yapar |
 |---|---|
-| `make generate` | `project.yml`'dan `Ecoomix.xcodeproj` üretir (proje dosyası git'te tutulmaz) |
-| `make core-test` | Saf iş mantığı testleri (`Packages/EcoomixCore`, macOS'ta saniyeler sürer) |
+| `make generate` | `project.yml`'dan `Economix.xcodeproj` üretir (proje dosyası git'te tutulmaz) |
+| `make core-test` | Saf iş mantığı testleri (`Packages/EconomixCore`, macOS'ta saniyeler sürer) |
 | `make test` | SwiftData entegrasyon testleri (simülatör) |
 | `make gemini-live` | Uygulamanın gerçek Gemini isteklerini (analiz ve kategori) `Config/Secrets.xcconfig`'teki anahtarla dener |
 | `scripts/check-gemini.sh` | Anahtarı ve istek biçimini küçük bir istekle hızlıca dener (anahtar yazdırılmaz) |
@@ -78,7 +78,7 @@ Kişisel gelir/gider, kredi kartı taksidi ve abonelik takibi için iPhone uygul
 
 1. iPhone'u kabloyla Mac'e bağla ve "Bu bilgisayara güven" de.
 2. iPhone'da **Ayarlar > Gizlilik ve Güvenlik > Geliştirici Modu**'nu aç (telefon yeniden başlar).
-3. İlk kurulumda bir kez `open Ecoomix.xcodeproj` ile projeyi aç. **Ecoomix** hedefinde **Signing & Capabilities** sekmesinde takımın seçili olduğunu ve iCloud container'ının (`iCloud.com.furkanfuat.ecoomix`) işaretli olduğunu kontrol et. Xcode, App ID'yi ve container'ı geliştirici hesabında oluşturur.
+3. İlk kurulumda bir kez `open Economix.xcodeproj` ile projeyi aç. **Economix** hedefinde **Signing & Capabilities** sekmesinde takımın seçili olduğunu ve iCloud container'ının (`iCloud.com.furkanfuat.ecoomix`) işaretli olduğunu kontrol et. Xcode, App ID'yi ve container'ı geliştirici hesabında oluşturur. Container adı uygulamanın eski yazımıyla kaldı; mevcut iCloud verileri orada durduğu için bilinçli olarak değiştirilmedi.
 4. Cihaz kimliğini bul: `xcrun devicectl list devices`
 5. Kur: `make device UDID=<cihaz-id>`
 
@@ -127,7 +127,7 @@ Eski `.xls` biçimi okunamaz. Dosyayı Numbers'ta açıp CSV ya da .xlsx olarak 
 
 **Akbank (Axess) PDF'leri:** Akbank ekstresi bir IBM ana bilgisayar çıktısıdır. Harfler Type3 bitmap yazı tipleriyle çizilir, kodlar EBCDIC'tir (kod sayfası 1140) ve PDF'te Unicode tablosu yoktur. Bu yüzden PDFKit anlamsız metin verir. Uygulama bu durumda içerik akışını kendisi okur ve kodları EBCDIC tablosuyla çevirir. Tabloda olmayan ı, İ, ş, Ş, ğ ve Ğ harfleri ayrı bir yazı tipinde, belgeye özel kodlarla durur. Bu harfler resimlerinden tanınır: önce gerçek ekstreden öğrenilmiş harf sözlüğüne (`TurkishGlyphs`), yoksa harfin şekline bakılır. ş ile Ş'nin şekli aynıdır, bu yüzden aradaki fark komşu harflerin boyundan anlaşılır.
 
-> Banka profilleri yaygın kolon adlarına göre yazıldı ("Tarih", "İşlem/Açıklama", "Tutar", "Taksit", "Borç/Alacak"). Gerçek bir ekstre düzgün okunmazsa elle eşleme ekranı devreye girer. Kolon düzeni belli olan bir örnek dosyayla profil kesinleştirilebilir (`Packages/EcoomixCore/Tests/EcoomixCoreTests/Fixtures`).
+> Banka profilleri yaygın kolon adlarına göre yazıldı ("Tarih", "İşlem/Açıklama", "Tutar", "Taksit", "Borç/Alacak"). Gerçek bir ekstre düzgün okunmazsa elle eşleme ekranı devreye girer. Kolon düzeni belli olan bir örnek dosyayla profil kesinleştirilebilir (`Packages/EconomixCore/Tests/EconomixCoreTests/Fixtures`).
 
 ## Yapay zekâ analizi (Google Gemini)
 
@@ -146,18 +146,18 @@ Google Cloud Console'da anahtarı **Generative Language API** ile sınırlayıp 
 ## Mimari
 
 ```
-Packages/EcoomixCore   Saf Swift: para, takvim, kesim döngüsü, taksit, düzenli işlem, rapor,
+Packages/EconomixCore   Saf Swift: para, takvim, kesim döngüsü, taksit, düzenli işlem, rapor,
                        bütçe, tasarruf analizi, AI özeti, CSV/XLSX ekstre çözümleme (+ testler)
-Ecoomix/Models         SwiftData modelleri (CloudKit kurallarına uygun)
-Ecoomix/Services       LedgerService, RecurringGenerator, ImportService, BudgetMonitor,
+Economix/Models         SwiftData modelleri (CloudKit kurallarına uygun)
+Economix/Services       LedgerService, RecurringGenerator, ImportService, BudgetMonitor,
                        NotificationScheduler, GeminiAdvisor, CSVExporter, SeedService
 Config                 Secrets.example.xcconfig (şablon); Secrets.xcconfig git'e girmez
-Ecoomix/Features       SwiftUI ekranları
-EcoomixTests           SwiftData entegrasyon testleri (bellek içi)
-EcoomixUITests         Ekran görüntüsü ve içe aktarma akışı testleri
+Economix/Features       SwiftUI ekranları
+EconomixTests           SwiftData entegrasyon testleri (bellek içi)
+EconomixUITests         Ekran görüntüsü ve içe aktarma akışı testleri
 ```
 
-Tasarım dokümanı: `docs/superpowers/specs/2026-10-18-ecoomix-design.md`
+Tasarım dokümanı: `docs/superpowers/specs/2026-10-18-economix-design.md`
 
 ## Lisans
 

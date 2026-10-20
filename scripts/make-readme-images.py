@@ -66,7 +66,7 @@ def banner():
     canvas.alpha_composite(glow.filter(ImageFilter.GaussianBlur(160)))
 
     draw = ImageDraw.Draw(canvas)
-    draw.text((140, 300), "Ecoomix", font=font(150, "Bold"), fill="white")
+    draw.text((140, 300), "Economix", font=font(150, "Bold"), fill="white")
     draw.text((146, 480), "Kişisel gelir-gider, taksit ve\nabonelik takibi — iPhone için",
               font=font(54, "Medium"), fill=(220, 245, 236), spacing=18)
     bullets = ["Ekstre içe aktarma: Garanti · Yapı Kredi · Akbank",

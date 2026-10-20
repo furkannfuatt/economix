@@ -4,7 +4,7 @@ import CoreGraphics
 import CoreText
 import Foundation
 
-let output = "EcoomixUITests/Fixtures/garanti-ornek.pdf"
+let output = "EconomixUITests/Fixtures/garanti-ornek.pdf"
 let rows: [(date: String, text: String, installment: String, bonus: String, amount: String)] = [
     ("02.10.2026", "MIGROS SANAL MARKET ISTANBUL", "", "3,20", "1.234,56"),
     ("04.10.2026", "STARBUCKS NISANTASI", "", "0,50", "185,00"),

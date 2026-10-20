@@ -2,8 +2,8 @@
 XCODEGEN ?= $(HOME)/.local/share/xcodegen-dist/bin/xcodegen
 SIM ?= iPhone 16 Pro
 DEST = 'platform=iOS Simulator,name=$(SIM)'
-XCB = xcodebuild -project Ecoomix.xcodeproj -scheme Ecoomix -derivedDataPath build/DerivedData
-APP = build/DerivedData/Build/Products/Debug-iphonesimulator/Ecoomix.app
+XCB = xcodebuild -project Economix.xcodeproj -scheme Economix -derivedDataPath build/DerivedData
+APP = build/DerivedData/Build/Products/Debug-iphonesimulator/Economix.app
 
 .PHONY: generate core-test test gemini-live build run demo screens screenshot device fixtures readme-images
 
@@ -15,11 +15,11 @@ Config/Secrets.xcconfig:
 	cp Config/Secrets.example.xcconfig $@
 
 core-test:
-	cd Packages/EcoomixCore && swift test
+	cd Packages/EconomixCore && swift test
 
 # UI testindeki Akbank düzenli (EBCDIC kodlu, Type3 yazı tipli) örnek PDF'i Core testlerindeki üreticiyle yazar
 fixtures:
-	cd Packages/EcoomixCore && AKBANK_FIXTURE_OUT="$(CURDIR)/EcoomixUITests/Fixtures/akbank-ornek.pdf" swift test --filter writeUIFixture
+	cd Packages/EconomixCore && AKBANK_FIXTURE_OUT="$(CURDIR)/EconomixUITests/Fixtures/akbank-ornek.pdf" swift test --filter writeUIFixture
 
 test: generate
 	$(XCB) -destination $(DEST) test
@@ -30,29 +30,29 @@ build: generate
 # Uygulamanın gerçek Gemini isteğini Config/Secrets.xcconfig'teki anahtarla dener (anahtar yazdırılmaz)
 gemini-live: generate
 	@TEST_RUNNER_GEMINI_LIVE_KEY="$$(sed -n 's/^[[:space:]]*GEMINI_API_KEY[[:space:]]*=[[:space:]]*//p' Config/Secrets.xcconfig | tr -d '[:space:]')" \
-		$(XCB) -destination $(DEST) -only-testing:EcoomixTests/GeminiLiveTests test 2>&1 \
+		$(XCB) -destination $(DEST) -only-testing:EconomixTests/GeminiLiveTests test 2>&1 \
 		| grep -E "GEMINI_CANLI|✔|✘|TEST (SUCCEEDED|FAILED)"
 
 # Simülatörde gerçek (boş) veriyle çalıştırır
 run: build
 	xcrun simctl boot "$(SIM)" 2>/dev/null || true
 	xcrun simctl install "$(SIM)" $(APP)
-	xcrun simctl launch --terminate-running-process "$(SIM)" com.furkanfuat.ecoomix
+	xcrun simctl launch --terminate-running-process "$(SIM)" com.furkanfuat.economix
 
 # Simülatörde 12 aylık demo veriyle çalıştırır (iCloud'a gitmez)
 demo: build
 	xcrun simctl boot "$(SIM)" 2>/dev/null || true
 	xcrun simctl install "$(SIM)" $(APP)
-	xcrun simctl launch --terminate-running-process "$(SIM)" com.furkanfuat.ecoomix -demoData
+	xcrun simctl launch --terminate-running-process "$(SIM)" com.furkanfuat.economix -demoData
 
 # Demo veriyle tüm ekranları gezip build/screens/ altına görüntü kaydeder
 screens: generate
 	rm -rf build/screens && mkdir -p build/screens
-	xcrun simctl uninstall "$(SIM)" com.furkanfuat.ecoomix 2>/dev/null || true
+	xcrun simctl uninstall "$(SIM)" com.furkanfuat.economix 2>/dev/null || true
 	TEST_RUNNER_SCREENSHOT_DIR="$(CURDIR)/build/screens" \
-	TEST_RUNNER_IMPORT_FILE="$(CURDIR)/EcoomixUITests/Fixtures/garanti-ornek.csv" \
-	TEST_RUNNER_IMPORT_PDF="$(CURDIR)/EcoomixUITests/Fixtures/garanti-ornek.pdf" \
-	TEST_RUNNER_IMPORT_AKBANK_PDF="$(CURDIR)/EcoomixUITests/Fixtures/akbank-ornek.pdf" xcodebuild -project Ecoomix.xcodeproj -scheme EcoomixScreens \
+	TEST_RUNNER_IMPORT_FILE="$(CURDIR)/EconomixUITests/Fixtures/garanti-ornek.csv" \
+	TEST_RUNNER_IMPORT_PDF="$(CURDIR)/EconomixUITests/Fixtures/garanti-ornek.pdf" \
+	TEST_RUNNER_IMPORT_AKBANK_PDF="$(CURDIR)/EconomixUITests/Fixtures/akbank-ornek.pdf" xcodebuild -project Economix.xcodeproj -scheme EconomixScreens \
 		-derivedDataPath build/DerivedData -destination $(DEST) test
 
 # README görselleri: temiz durum çubuğuyla demo ekranları (açık + koyu) ve kapak (Python + Pillow gerekir).
@@ -69,7 +69,7 @@ readme-images: generate
 	            dark:dashboard:ozet-koyu dark:reports:raporlar-koyu dark:transactions:islemler-koyu; do \
 		mode=$${spec%%:*}; rest=$${spec#*:}; tab=$${rest%%:*}; name=$${rest#*:}; \
 		xcrun simctl ui "$(SIM)" appearance $$mode; \
-		xcrun simctl launch --terminate-running-process "$(SIM)" com.furkanfuat.ecoomix -demoData -tab $$tab -reportRange month >/dev/null; \
+		xcrun simctl launch --terminate-running-process "$(SIM)" com.furkanfuat.economix -demoData -tab $$tab -reportRange month >/dev/null; \
 		sleep 5; xcrun simctl io "$(SIM)" screenshot build/readme/$$name.png >/dev/null; \
 	done
 	xcrun simctl ui "$(SIM)" appearance light
@@ -80,7 +80,7 @@ screenshot:
 
 # Kabloyla bağlı iPhone'a kurar: make device UDID=<cihaz-id>
 device: generate
-	xcodebuild -project Ecoomix.xcodeproj -scheme Ecoomix -configuration Release \
+	xcodebuild -project Economix.xcodeproj -scheme Economix -configuration Release \
 		-destination 'platform=iOS,id=$(UDID)' -allowProvisioningUpdates \
 		-derivedDataPath build/DeviceData build
-	xcrun devicectl device install app --device $(UDID) build/DeviceData/Build/Products/Release-iphoneos/Ecoomix.app
+	xcrun devicectl device install app --device $(UDID) build/DeviceData/Build/Products/Release-iphoneos/Economix.app

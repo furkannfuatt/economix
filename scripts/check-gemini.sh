@@ -26,7 +26,7 @@ BODY='{
 # Anahtar komut satırında değil, curl'e standart girişten ayar olarak verilir: çalışırken `ps` ile
 # süreç listesinde görünmez (printf zsh'ın kendi komutudur, ayrı süreç açmaz).
 printf 'header = "x-goog-api-key: %s"\n' "$KEY" | curl -sS -w '\nHTTP %{http_code}\n' --config - \
-  -H "X-Ios-Bundle-Identifier: com.furkanfuat.ecoomix" \
+  -H "X-Ios-Bundle-Identifier: com.furkanfuat.economix" \
   -H "Content-Type: application/json" \
   -d "$BODY" \
   "https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent"

@@ -1,4 +1,4 @@
-name: Ecoomix
+name: Economix
 options:
   bundleIdPrefix: com.furkanfuat
   deploymentTarget:
@@ -16,90 +16,91 @@ settings:
     SWIFT_APPROACHABLE_CONCURRENCY: YES
 
 packages:
-  EcoomixCore:
-    path: Packages/EcoomixCore
+  EconomixCore:
+    path: Packages/EconomixCore
 
 targets:
-  Ecoomix:
+  Economix:
     type: application
     platform: iOS
     configFiles:
       Debug: Config/Secrets.xcconfig
       Release: Config/Secrets.xcconfig
     sources:
-      - Ecoomix
+      - Economix
     dependencies:
-      - package: EcoomixCore
+      - package: EconomixCore
     entitlements:
-      path: Ecoomix/Ecoomix.entitlements
+      path: Economix/Economix.entitlements
       properties:
         aps-environment: development
+        # Eski yazım bilinçli: mevcut iCloud verileri bu kapsayıcıda (ModelContainerFactory.cloudContainerID).
         com.apple.developer.icloud-container-identifiers:
           - iCloud.com.furkanfuat.ecoomix
         com.apple.developer.icloud-services:
           - CloudKit
     info:
-      path: Ecoomix/Info.plist
+      path: Economix/Info.plist
       properties:
-        CFBundleDisplayName: Ecoomix
+        CFBundleDisplayName: Economix
         CFBundleDevelopmentRegion: tr
         UILaunchScreen: {}
         UIBackgroundModes:
           - remote-notification
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        NSFaceIDUsageDescription: "Ecoomix'i kilitlemek için Face ID kullanılır."
+        NSFaceIDUsageDescription: "Economix'i kilitlemek için Face ID kullanılır."
         ITSAppUsesNonExemptEncryption: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.furkanfuat.ecoomix
+        PRODUCT_BUNDLE_IDENTIFIER: com.furkanfuat.economix
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_PREVIEWS: YES
 
-  EcoomixTests:
+  EconomixTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - EcoomixTests
+      - EconomixTests
     dependencies:
-      - target: Ecoomix
+      - target: Economix
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.furkanfuat.ecoomix.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.furkanfuat.economix.tests
         GENERATE_INFOPLIST_FILE: YES
 
-  EcoomixUITests:
+  EconomixUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - EcoomixUITests
+      - EconomixUITests
     dependencies:
-      - target: Ecoomix
+      - target: Economix
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.furkanfuat.ecoomix.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: com.furkanfuat.economix.uitests
         GENERATE_INFOPLIST_FILE: YES
-        TEST_TARGET_NAME: Ecoomix
+        TEST_TARGET_NAME: Economix
         SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
 
 schemes:
-  Ecoomix:
+  Economix:
     build:
       targets:
-        Ecoomix: all
-        EcoomixTests: [test]
+        Economix: all
+        EconomixTests: [test]
     test:
       targets:
-        - EcoomixTests
+        - EconomixTests
     run:
       config: Debug
-  EcoomixScreens:
+  EconomixScreens:
     build:
       targets:
-        Ecoomix: all
-        EcoomixUITests: [test]
+        Economix: all
+        EconomixUITests: [test]
     test:
       targets:
-        - EcoomixUITests
+        - EconomixUITests
