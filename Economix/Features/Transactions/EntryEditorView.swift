@@ -35,7 +35,11 @@ struct EntryEditorView: View {
     private var editing: LedgerEntry? { request.entry }
     private var isInstallmentEntry: Bool { editing?.installmentPlan != nil }
     private var amount: Money? { Money.parse(amountText).flatMap { $0.minor > 0 ? $0 : nil } }
-    private var categories: [EntryCategory] { allCategories.filter { $0.kind == kind } }
+    /// Yatırım bozma da yatırım kategorilerini kullanır (kategori varlık türüdür, yön işlem türündedir).
+    private var categories: [EntryCategory] { allCategories.filter { $0.kind == kind.categoryKind } }
+
+    /// Üstteki tür seçici: yatırım ve yatırım bozma aynı "Yatırım" sekmesinde, alttaki seçiciyle ayrılır.
+    private static let mainKinds: [TxKind] = [.expense, .income, .investment, .transfer]
 
     private var canSplitIntoInstallments: Bool {
         editing == nil && kind == .expense && account?.isCreditCard == true
@@ -52,12 +56,23 @@ struct EntryEditorView: View {
             Form {
                 if !isInstallmentEntry {
                     Section {
-                        Picker("Tür", selection: $kind) {
-                            ForEach(TxKind.allCases, id: \.self) { Text($0.title).tag($0) }
+                        Picker("Tür", selection: Binding(get: { kind.categoryKind }, set: { newKind in kind = newKind })) {
+                            ForEach(Self.mainKinds, id: \.self) { Text($0.title).tag($0) }
                         }
                         .pickerStyle(.segmented)
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        if kind.categoryKind == .investment {
+                            Picker("Yön", selection: $kind) {
+                                Text("Yatırım yap").tag(TxKind.investment)
+                                Text("Yatırımı boz").tag(TxKind.divestment)
+                            }
+                            .pickerStyle(.segmented)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 0, trailing: 0))
+                            .listRowSeparator(.hidden)
+                        }
                     }
                 }
 
@@ -84,12 +99,12 @@ struct EntryEditorView: View {
                         accountPicker("Nereden", selection: $account)
                         accountPicker("Nereye", selection: $toAccount)
                     } else {
-                        accountPicker(kind == .income ? "Hesap" : "Ödeme", selection: $account)
+                        accountPicker(kind == .income || kind == .divestment ? "Hesap" : "Ödeme", selection: $account)
                     }
                     DatePicker("Tarih", selection: $date, displayedComponents: .date)
                         .disabled(isInstallmentEntry)
                     if kind != .transfer {
-                        TextField(kind == .income ? "Kimden (ör. işveren)" : kind == .investment ? "Nereye (ör. Midas)" : "Nereye (ör. Migros)",
+                        TextField(merchantPlaceholder,
                                   text: $merchant)
                             .textInputAutocapitalization(.words)
                             .onSubmit(suggestCategory)
@@ -135,7 +150,7 @@ struct EntryEditorView: View {
             }
             .onAppear(perform: load)
             .onChange(of: kind) { _, newKind in
-                if category?.kind != newKind { category = nil }
+                if category?.kind != newKind.categoryKind { category = nil }
                 if newKind != .expense { installmentCount = 1 }
             }
             .onChange(of: account) { _, newAccount in
@@ -148,8 +163,17 @@ struct EntryEditorView: View {
         switch kind {
         case .expense: .primary
         case .income: .income
-        case .investment: .investment
+        case .investment, .divestment: .investment
         case .transfer: .transfer
+        }
+    }
+
+    private var merchantPlaceholder: String {
+        switch kind {
+        case .income: "Kimden (ör. işveren)"
+        case .investment: "Nereye (ör. Midas)"
+        case .divestment: "Nereden (ör. Midas)"
+        case .expense, .transfer: "Nereye (ör. Migros)"
         }
     }
 
@@ -218,7 +242,7 @@ struct EntryEditorView: View {
 
     private func suggestCategory() {
         guard category == nil else { return }
-        if let learned = service.learnedCategory(for: merchant), learned.kind == kind {
+        if let learned = service.learnedCategory(for: merchant), learned.kind == kind.categoryKind {
             category = learned
         }
     }

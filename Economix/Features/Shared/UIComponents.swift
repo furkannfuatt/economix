@@ -138,7 +138,7 @@ struct AmountText: View {
     private var text: String {
         switch kind {
         case .expense, .investment: "-" + amount.formatted()
-        case .income: "+" + amount.formatted()
+        case .income, .divestment: "+" + amount.formatted()
         case .transfer: amount.formatted()
         }
     }
@@ -147,7 +147,7 @@ struct AmountText: View {
         switch kind {
         case .expense: .primary
         case .income: .income
-        case .investment: .investment
+        case .investment, .divestment: .investment
         case .transfer: .secondary
         }
     }

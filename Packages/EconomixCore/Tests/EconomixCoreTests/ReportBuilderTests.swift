@@ -16,6 +16,12 @@ private func planTxs(total: Int, count: Int, purchase: Date, category: String) -
     }
 }
 
+/// Yatırım bozma: gelir sayılmaz, kalana eklenir.
+private func investmentReturn(_ lira: Int, _ date: Date) -> TxSnapshot {
+    TxSnapshot(id: UUID().uuidString, amount: tl(lira), kind: .divestment, date: date, categoryID: "yatirim-alim",
+               accountID: nil, merchant: "MIDAS")
+}
+
 @Suite("Raporlar")
 struct ReportBuilderTests {
     let october = DatePeriod(month: YearMonth(year: 2026, month: 10))
@@ -36,7 +42,7 @@ struct ReportBuilderTests {
         #expect(s.savingsRate == 0.25)
     }
 
-    @Test("Yatırım gider sayılmaz; ayrı toplanır, net ve tasarruf oranı değişmez")
+    @Test("Yatırım gider sayılmaz ama kalandan düşülür; tasarruf oranında tasarruf sayılır")
     func investments() {
         let txs = [
             tx(.income, 40_000, d(2026, 10, 1)),
@@ -47,8 +53,9 @@ struct ReportBuilderTests {
         let s = ReportBuilder.summary(txs, in: october)
         #expect(s.expense == tl(30_000))
         #expect(s.investment == tl(6_000))
-        #expect(s.net == tl(10_000))
+        #expect(s.net == tl(4_000))
         #expect(s.savingsRate == 0.25)
+        #expect(s.remainingRate == 0.1)
         #expect(s.transactionCount == 3)
         #expect(ReportBuilder.categoryTotals(txs, kind: .expense, in: october).map(\.amount) == [tl(30_000)])
 
@@ -56,7 +63,36 @@ struct ReportBuilderTests {
         let monthly = ReportBuilder.monthlyTotals(txs, months: months)
         #expect(monthly.map(\.investment) == [tl(6_000), tl(1_000)])
         #expect(monthly.map(\.expense) == [tl(30_000), .zero])
+        #expect(monthly.map(\.net) == [tl(4_000), tl(-1_000)])
+        #expect(monthly.first?.savingsRate == 0.25)
         #expect(TxKind.investment.title == "Yatırım")
+    }
+
+    @Test("Yatırım bozma gelir sayılmaz; kalana eklenir, alımla aynı ayda birbirini götürür")
+    func investmentReturns() {
+        let base = [tx(.income, 40_000, d(2026, 10, 1)), tx(.expense, 30_000, d(2026, 10, 3))]
+
+        let roundTrip = ReportBuilder.summary(base + [tx(.investment, 6_000, d(2026, 10, 10)),
+                                                      investmentReturn(6_000, d(2026, 10, 20))], in: october)
+        #expect(roundTrip.income == tl(40_000))
+        #expect(roundTrip.investment == tl(6_000))
+        #expect(roundTrip.investmentReturn == tl(6_000))
+        #expect(roundTrip.netInvestment == .zero)
+        #expect(roundTrip.net == ReportBuilder.summary(base, in: october).net)
+        #expect(roundTrip.savingsRate == 0.25)
+        #expect(roundTrip.transactionCount == 4)
+
+        let sale = ReportBuilder.summary(base + [investmentReturn(5_000, d(2026, 10, 20))], in: october)
+        #expect(sale.income == tl(40_000))
+        #expect(sale.netInvestment == tl(-5_000))
+        #expect(sale.net == tl(15_000))
+        #expect(sale.savingsRate == 0.25)
+
+        let monthly = ReportBuilder.monthlyTotals(base + [investmentReturn(5_000, d(2026, 10, 20))],
+                                                  months: [YearMonth(year: 2026, month: 10)])
+        #expect(monthly.first?.income == tl(40_000))
+        #expect(monthly.first?.investmentReturn == tl(5_000))
+        #expect(monthly.first?.net == tl(15_000))
     }
 
     @Test("Dev tutarlar toplanırken özet çökmez")
@@ -70,9 +106,11 @@ struct ReportBuilderTests {
         #expect(ReportBuilder.spendingSeries(txs, in: october, by: .week).map(\.amount).sum() == Money(minor: .max))
     }
 
-    @Test("Gelir yoksa tasarruf oranı nil")
+    @Test("Gelir yoksa tasarruf ve kalan oranı nil")
     func noIncome() {
-        #expect(ReportBuilder.summary([tx(.expense, 100, d(2026, 10, 1))], in: october).savingsRate == nil)
+        let s = ReportBuilder.summary([tx(.expense, 100, d(2026, 10, 1))], in: october)
+        #expect(s.savingsRate == nil)
+        #expect(s.remainingRate == nil)
     }
 
     @Test("Aylık yük modunda taksit aylara yayılır, satın alma modunda alım ayında tek tutar")

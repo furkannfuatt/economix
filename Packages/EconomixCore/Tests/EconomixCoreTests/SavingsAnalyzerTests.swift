@@ -128,6 +128,27 @@ struct SavingsAnalyzerTests {
         #expect(analyze(txs).first { $0.kind == .savingsRate }?.severity == .critical)
     }
 
+    @Test("Yatırım tasarruf sayılır: kalanı eksiye düşürse de 'gelirinden fazla harcadın' denmez")
+    func investmentIsSaving() {
+        var txs = salaries()
+        txs.append(exp(38_000, d(2026, 9, 15), "kira"))
+        txs.append(TxSnapshot(id: "v", amount: tl(15_000), kind: .investment, date: d(2026, 9, 20), categoryID: nil,
+                              accountID: nil, merchant: "MIDAS"))
+        #expect(analyze(txs).first { $0.kind == .savingsRate }?.severity == .info)
+    }
+
+    @Test("Aşım tutarına yatırım eklenmez")
+    func overspendExcludesInvestment() {
+        var txs = salaries()
+        txs.append(exp(52_000, d(2026, 9, 15), "kira"))
+        txs.append(TxSnapshot(id: "v", amount: tl(5_000), kind: .investment, date: d(2026, 9, 20), categoryID: nil,
+                              accountID: nil, merchant: "MIDAS"))
+        let insight = analyze(txs).first { $0.kind == .savingsRate }
+        #expect(insight?.severity == .critical)
+        #expect(insight?.estimatedMonthlySaving == tl(2_000))
+        #expect(insight?.message.contains("2.000") == true)
+    }
+
     @Test("Öneriler önem ve tasarruf tutarına göre sıralanır")
     func ordering() {
         var txs = salaries() + [exp(9_500, d(2026, 10, 10), "market"), exp(46_000, d(2026, 9, 15), "kira")]

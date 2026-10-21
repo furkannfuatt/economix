@@ -36,7 +36,7 @@ public enum CardLedger {
 
             let signed: Money = switch tx.kind {
             case .expense, .investment, .transfer: tx.amount // transfer: karttan nakit avans
-            case .income: -tx.amount // iade
+            case .income, .divestment: -tx.amount // iade ya da karta dönen yatırım
             }
 
             if last.period.contains(tx.date) {

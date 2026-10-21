@@ -39,7 +39,7 @@ struct TransactionsView: View {
         var net: Money {
             entries.reduce(.zero) { total, entry in
                 switch entry.kind {
-                case .income: total + entry.amount
+                case .income, .divestment: total + entry.amount
                 case .expense, .investment: total - entry.amount
                 case .transfer: total
                 }

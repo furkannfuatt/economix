@@ -5,7 +5,7 @@ DEST = 'platform=iOS Simulator,name=$(SIM)'
 XCB = xcodebuild -project Economix.xcodeproj -scheme Economix -derivedDataPath build/DerivedData
 APP = build/DerivedData/Build/Products/Debug-iphonesimulator/Economix.app
 
-.PHONY: generate core-test test gemini-live build run demo screens screenshot device fixtures readme-images
+.PHONY: generate core-test test gemini-live build run demo screens screenshot device fixtures readme-images appstore-screens archive upload
 
 generate: Config/Secrets.xcconfig
 	@$(XCODEGEN) generate --quiet
@@ -74,6 +74,34 @@ readme-images: generate
 	done
 	xcrun simctl ui "$(SIM)" appearance light
 	python3 scripts/make-readme-images.py
+
+# App Store ekran görüntüleri: 6,9 inç (iPhone 17 Pro Max, 1320×2868), demo veri, temiz durum çubuğu → build/appstore/
+APPSTORE_SIM ?= iPhone 17 Pro Max
+APPSTORE_SHOTS = 01-ozet 36-rapor-ay 02-ozet-dagilim 09-taksitler-liste 33-rapor-6ay-kategoriler 04-oneriler 21-akbank-taksit 31-rapor-6ay-kumulatif
+appstore-screens:
+	xcrun simctl boot "$(APPSTORE_SIM)" 2>/dev/null || true
+	xcrun simctl status_bar "$(APPSTORE_SIM)" clear
+	xcrun simctl status_bar "$(APPSTORE_SIM)" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+		--cellularMode active --cellularBars 4 --operatorName "" --batteryState charged --batteryLevel 100
+	xcrun simctl ui "$(APPSTORE_SIM)" appearance light
+	$(MAKE) screens SIM="$(APPSTORE_SIM)"
+	rm -rf build/appstore && mkdir -p build/appstore
+	i=1; for name in $(APPSTORE_SHOTS); do \
+		cp build/screens/$$name.png build/appstore/$$(printf %02d $$i)-$$name.png; i=$$((i+1)); \
+	done
+	@ls build/appstore
+
+# App Store arşivi (Release, otomatik imzalama) → build/Economix.xcarchive
+archive: generate
+	rm -rf build/Economix.xcarchive
+	xcodebuild -project Economix.xcodeproj -scheme Economix -configuration Release -destination 'generic/platform=iOS' \
+		-archivePath build/Economix.xcarchive -allowProvisioningUpdates archive
+
+# App Store Connect'e yükler (önce App Store Connect'te uygulama kaydı açılmış olmalı; bkz. docs/app-store.md).
+# Her yüklemede CURRENT_PROJECT_VERSION (project.yml) bir artırılmalı.
+upload: archive
+	xcodebuild -exportArchive -archivePath build/Economix.xcarchive -exportPath build/export \
+		-exportOptionsPlist scripts/ExportOptions.plist -allowProvisioningUpdates
 
 screenshot:
 	xcrun simctl io "$(SIM)" screenshot build/screenshot.png

@@ -25,6 +25,8 @@ struct ImportView: View {
     @State private var copiedSample = false
     @State private var readingPDF = false
     @State private var categorizing = false
+    @State private var askingAIConsent = false
+    @AppStorage(AIConsent.key) private var aiConsentGiven = false
     @State private var categoryMessage: String?
     @State private var categoryError: String?
     @State private var confirmRemoval = false
@@ -49,6 +51,7 @@ struct ImportView: View {
         .navigationTitle("Ekstre içe aktar")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .aiConsentAlert(isPresented: $askingAIConsent) { Task { await categorizeWithGemini() } }
         .fileImporter(isPresented: $showPicker, allowedContentTypes: Self.types) { result in
             switch result {
             case .success(let url): load(url)
@@ -246,8 +249,11 @@ struct ImportView: View {
         if !indices.isEmpty {
             Section {
                 let expenseCategories = categories.filter { $0.kind == .expense || $0.kind == .investment }
+                // Hesaba gelen para: gelir ya da (yatırım kategorisiyle) yatırım bozma.
+                let incomeCategories = categories.filter { $0.kind == .income || $0.kind == .investment }
                 ForEach(indices, id: \.self) { index in
-                    CandidateRow(candidate: $candidates[index], categories: expenseCategories) { category in
+                    CandidateRow(candidate: $candidates[index],
+                                 categories: candidates[index].row.kind == .income ? incomeCategories : expenseCategories) { category in
                         let others = ImportCandidate.applyCategory(category, at: index, in: &candidates)
                         categoryMessage = others > 0
                             ? "\(category?.name ?? "Kategori") aynı işyerinin \(others) satırına daha uygulandı." : nil
@@ -278,7 +284,7 @@ struct ImportView: View {
                 if !uncategorized.isEmpty {
                     if GeminiKeyProvider.current != nil {
                         Button {
-                            Task { await categorizeWithGemini() }
+                            if aiConsentGiven { Task { await categorizeWithGemini() } } else { askingAIConsent = true }
                         } label: {
                             HStack {
                                 Label(categorizing ? "Gemini belirliyor…" : "Kategorisiz \(uncategorized.count) satırı Gemini ile belirle",
@@ -484,7 +490,7 @@ private struct CandidateRow: View {
                 if let entry = candidate.matchedEntry {
                     MatchNote(candidate: candidate, entry: entry)
                 }
-                if candidate.row.kind == .expense {
+                if candidate.row.kind == .expense || candidate.row.kind == .income {
                     Menu {
                         Button("Kategorisiz") { onSelectCategory(nil) }
                         ForEach(categories) { category in

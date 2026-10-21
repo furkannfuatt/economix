@@ -39,6 +39,14 @@ final class ScreenshotTests: XCTestCase {
         tab("Ayarlar")
         snap("11-ayarlar")
 
+        // Ayarlar > Yedekle ve geri yükle
+        app.buttons["Yedekle ve geri yükle"].firstMatch.tap()
+        sleep(2)
+        snap("25-yedek")
+        app.navigationBars.buttons.firstMatch.tap()
+        sleep(1)
+        app.swipeDown()
+
         // Kategoriler > Yatırım sekmesi
         app.buttons["Kategoriler ve bütçeler"].firstMatch.tap()
         app.buttons["Yatırım"].firstMatch.tap()
@@ -52,6 +60,9 @@ final class ScreenshotTests: XCTestCase {
             app.buttons["Yatırım"].firstMatch.tap()
             sleep(1)
             snap("24-ekle-yatirim")
+            app.buttons["Yatırımı boz"].firstMatch.tap()
+            sleep(1)
+            snap("24b-ekle-yatirim-boz")
         }
     }
 

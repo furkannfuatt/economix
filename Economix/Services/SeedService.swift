@@ -33,7 +33,6 @@ enum SeedService {
         .init(key: "burs", name: "Burs", icon: "graduationcap.fill", color: "#BF5AF2", kind: .income),
         .init(key: "ek-gelir", name: "Ek Gelir", icon: "plus.circle.fill", color: "#32ADE6", kind: .income),
         .init(key: "freelance", name: "Freelance", icon: "laptopcomputer", color: "#5AC8FA", kind: .income),
-        .init(key: "yatirim", name: "Yatırım getirisi", icon: "chart.line.uptrend.xyaxis", color: "#FFB800", kind: .income),
         .init(key: "yatirim-alim", name: "Yatırım", icon: "chart.line.uptrend.xyaxis", color: "#9E66ED", kind: .investment),
         .init(key: "diger-gelir", name: "Diğer", icon: "ellipsis.circle.fill", color: "#8E8E93", kind: .income),
     ]
@@ -60,8 +59,15 @@ enum SeedService {
     /// İlk sürümden sonra eklenen varsayılan kategoriler.
     static let addedLater = ["online", "burs", "yatirim-alim"]
 
-    /// Yatırım önce gider kategorisi olarak eklenmişti; artık ayrı türdür (gider, net ve tasarruf oranına girmez).
-    /// Kategori, kayıtları ve düzenli işlemleri yatırım türüne taşınır; gelirdeki "Yatırım" getiri olarak adlanır.
+    /// Eskiden gelirde duran yatırım kategorisinin anahtarı ("Yatırım" → "Yatırım getirisi" → "Yatırım bozma").
+    private static let legacyReturnsKey = "yatirim"
+    private static let legacyReturnsNames: Set<String> = ["Yatırım", "Yatırım getirisi", "Yatırım bozma"]
+
+    /// Yatırım önce gider kategorisi olarak eklenmişti; artık ayrı türdür (gider sayılmaz, kalandan düşülür).
+    /// Kategori, kayıtları ve düzenli işlemleri yatırım türüne taşınır.
+    /// Yatırım bozma da artık gelir değil ayrı türdür: gelirdeki eski yatırım kategorisinin kayıtları yatırım bozma
+    /// türüne ve "Yatırım" kategorisine taşınır, boşalan kategori arşivlenir. Adı kullanıcı tarafından değiştirilmiş
+    /// (ör. "Temettü") kategoriye dokunulmaz; o gerçek gelir olarak kalır.
     static func migrateInvestmentCategory(in context: ModelContext) throws {
         let categories = try context.fetch(FetchDescriptor<EntryCategory>())
         for category in categories where category.seedKey == "yatirim-gider" {
@@ -74,8 +80,28 @@ enum SeedService {
                 item.isSubscription = false
             }
         }
-        for category in categories where category.seedKey == "yatirim" && category.kind == .income && category.name == "Yatırım" {
-            category.name = "Yatırım getirisi"
+        for returns in categories where returns.seedKey == legacyReturnsKey && returns.kind == .income
+            && legacyReturnsNames.contains(returns.name) && !returns.isArchived {
+            let target: EntryCategory
+            if let existing = categories.first(where: { $0.seedKey == "yatirim-alim" && !$0.isArchived }) {
+                target = existing
+            } else {
+                // Yatırım kategorisi yoksa bu kategori onun yerine geçer.
+                returns.kind = .investment
+                returns.name = "Yatırım"
+                returns.seedKey = "yatirim-alim"
+                target = returns
+            }
+            for entry in returns.entries ?? [] where entry.kind == .income {
+                entry.kind = .divestment
+                entry.category = target
+            }
+            for item in returns.recurringItems ?? [] where item.kind == .income {
+                item.kind = .divestment
+                item.category = target
+            }
+            for rule in returns.merchantRules ?? [] { rule.category = target }
+            if target !== returns { returns.isArchived = true }
         }
         if context.hasChanges { try context.save() }
     }

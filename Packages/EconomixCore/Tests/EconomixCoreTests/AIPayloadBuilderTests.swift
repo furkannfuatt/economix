@@ -26,6 +26,31 @@ struct AIPayloadBuilderTests {
                              installmentPlans: [plan])
     }
 
+    @Test("Yatırım bozulan ayda yatırım net (negatif) gider; gelir ve tasarruf oranı şişmez")
+    func investmentReturn() {
+        var base = input()
+        base.transactions.append(TxSnapshot(id: "r", amount: tl(9_000), kind: .divestment, date: d(2026, 10, 16),
+                                            categoryID: "yatirim", accountID: nil, merchant: "MIDAS"))
+        let payload = AIPayloadBuilder.build(from: base, insights: [], includeMerchants: false)
+        #expect(payload.months.last?.income == 50_000)
+        #expect(payload.months.last?.investment == -4_000)
+        #expect(payload.months.last?.savingsRatePercent == 78)
+    }
+
+    @Test("İşyeri izni kapalıyken taksit planı ve işyeri adları kural bulgularıyla da gönderilmez")
+    func findingsHidePlanNamesWithoutConsent() throws {
+        let insights = SavingsAnalyzer.analyze(input())
+        let relief = try #require(insights.first { $0.kind == .installmentRelief })
+        #expect(relief.message.contains("Telefon"), "Önkoşul: bulgu plan adını içeriyor")
+
+        let hidden = AIPayloadBuilder.build(from: input(), insights: insights, includeMerchants: false)
+        #expect(!hidden.ruleBasedFindings.contains { $0.contains("Telefon") })
+        #expect(hidden.ruleBasedFindings.contains(relief.title), "Başlık (ay ve rahatlama) yine gider")
+
+        let shown = AIPayloadBuilder.build(from: input(), insights: insights, includeMerchants: true)
+        #expect(shown.ruleBasedFindings.contains { $0.contains("Telefon") })
+    }
+
     @Test("Son 6 ay sırayla, cari ay kısmi olarak işaretli")
     func months() {
         let payload = AIPayloadBuilder.build(from: input(), insights: [], includeMerchants: false)

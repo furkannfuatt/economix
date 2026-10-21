@@ -6,7 +6,7 @@ public struct AIPayload: Codable, Equatable, Sendable {
         public let month: String
         public let income: Double
         public let expense: Double
-        /// Yatırıma ayrılan; gider ve tasarruf oranına dahil değil.
+        /// Yatırıma giden net para (alım − bozma; negatifse yatırımdan çekilen). Gider değil, tasarruf sayılır.
         public let investment: Double
         public let savingsRatePercent: Double?
     }
@@ -65,8 +65,8 @@ public enum AIPayloadBuilder {
                 month: totals.month.description,
                 income: totals.income.lira,
                 expense: totals.expense.lira,
-                investment: totals.investment.lira,
-                savingsRatePercent: totals.income.isZero ? nil : (totals.net.ratio(of: totals.income) * 100).rounded()
+                investment: totals.netInvestment.lira,
+                savingsRatePercent: totals.savingsRate.map { ($0 * 100).rounded() }
             )
         }
 
@@ -101,7 +101,13 @@ public enum AIPayloadBuilder {
             categories: categoryRows,
             subscriptions: input.subscriptions.map { .init(title: $0.title, monthly: $0.monthlyAmount.lira) },
             installmentLoad: outlook.months.map { .init(month: $0.month.description, amount: $0.amount.lira) },
-            ruleBasedFindings: insights.map { "\($0.title): \($0.message)" },
+            ruleBasedFindings: insights.map { insight in
+                // Taksit bitişi bulgusu plan adlarını taşır (adı yoksa ekstredeki işyeri adı); işyeri izni yoksa
+                // yalnızca başlık gider. Tutarlar zaten `installmentLoad` alanında.
+                insight.kind == .installmentRelief && !includeMerchants
+                    ? insight.title
+                    : "\(insight.title): \(insight.message)"
+            },
             topMerchants: merchants
         )
     }

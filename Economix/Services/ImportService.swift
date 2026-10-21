@@ -199,7 +199,9 @@ struct ImportService {
                                     account: account, merchant: row.description, note: "Ödül / bonus", source: .imported,
                                     importHash: row.importHash)
             case (_, .income):
-                try ledger.addEntry(amount: row.amount, kind: .income, date: row.date, category: candidate.category,
+                // Yatırım kategorisi seçilen gelen para yatırım bozmadır.
+                let kind: TxKind = candidate.category?.kind == .investment ? .divestment : .income
+                try ledger.addEntry(amount: row.amount, kind: kind, date: row.date, category: candidate.category,
                                     account: account, merchant: row.description, source: .imported,
                                     importHash: row.importHash)
             case (_, .expense):
@@ -299,7 +301,7 @@ struct ImportService {
     private func kindMatches(_ entry: LedgerEntry, _ row: StatementRow) -> Bool {
         switch row.kind {
         case .expense: entry.kind == .expense || entry.kind == .investment
-        case .income, .refund, .reward: entry.kind == .income
+        case .income, .refund, .reward: entry.kind == .income || entry.kind == .divestment
         case .payment: entry.kind == .transfer
         }
     }

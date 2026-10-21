@@ -86,7 +86,7 @@ economix/
 - **Düzenli işlemler:** Uygulama öne geldiğinde `RecurringGenerator`, `lastGeneratedDate`'ten bugüne kadar kaçırılan vadeleri üretir. Maaş, kira ve abonelikler bu yolla otomatik eklenir. Fiyat değişikliği yalnızca gelecekteki işlemleri etkiler.
 - **Varsayılan kategoriler / CloudKit çakışması:** Yeniden kurulumda iCloud'dan gelen verilerle varsayılanlar çift oluşmasın diye, varsayılan kategoriler onboarding'de butonla yüklenir ve her açılışta `seedKey` üzerinden tekilleştirme çalışır.
   - Gider: Market, Yemek & Kafe, Ulaşım/Yakıt, Kira, Faturalar, Abonelikler, Giyim, Sağlık, Eğitim, Eğlence, Elektronik, Ev & Yaşam, Kişisel Bakım, Hediye, Seyahat, Diğer
-  - Gelir: Maaş, Ek Gelir, Freelance, Yatırım, Diğer
+  - Gelir: Maaş, Burs, Ek Gelir, Freelance, Diğer · Yatırım: Yatırım. Yatırım sekmesinde "Yatırım yap" (gider sayılmaz, kalandan düşülür) ve "Yatırımı boz" (gelir sayılmaz, kalana eklenir)
 
 ---
 

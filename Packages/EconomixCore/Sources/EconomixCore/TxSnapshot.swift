@@ -1,8 +1,10 @@
 import Foundation
 
 public enum TxKind: String, CaseIterable, Sendable, Codable {
-    /// Yatırım: gider sayılmaz (bütçe, net ve tasarruf oranına girmez), ayrı toplanır; harcandığı kartın borcuna eklenir.
-    case expense, income, investment, transfer
+    /// Yatırım (alım): gider sayılmaz (bütçe ve tasarruf oranına girmez) ama kalandan düşülür;
+    /// harcandığı kartın borcuna eklenir.
+    /// Yatırım bozma (`divestment`): gelir sayılmaz, kalana eklenir; yatırım kategorilerini kullanır.
+    case expense, income, investment, transfer, divestment
 
     public var title: String {
         switch self {
@@ -10,8 +12,12 @@ public enum TxKind: String, CaseIterable, Sendable, Codable {
         case .income: "Gelir"
         case .investment: "Yatırım"
         case .transfer: "Transfer"
+        case .divestment: "Yatırım bozma"
         }
     }
+
+    /// İşlemin seçebileceği kategorilerin türü: yatırım bozma da yatırım kategorilerini kullanır.
+    public var categoryKind: TxKind { self == .divestment ? .investment : self }
 }
 
 /// Bir işlemin taksit planına bağlantısı.

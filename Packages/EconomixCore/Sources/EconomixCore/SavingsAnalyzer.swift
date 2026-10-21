@@ -241,10 +241,12 @@ public enum SavingsAnalyzer {
         guard let rate = summary.savingsRate else { return [] }
         let when = c.lastMonth.locativeName
         if rate < 0 {
+            // Yalnızca gider: yatırım tasarruf sayılır, aşıma eklenmez.
+            let overspend = summary.expense - summary.income
             return [Insight(id: "savings-rate", kind: .savingsRate, severity: .critical,
                             title: "Gelirinden fazla harcadın",
-                            message: "\(when) giderin gelirini \((-summary.net).formatted(decimals: false)) aştı. Önce sabit giderleri ve taksitleri gözden geçir.",
-                            estimatedMonthlySaving: -summary.net, categoryID: nil)]
+                            message: "\(when) giderin gelirini \(overspend.formatted(decimals: false)) aştı. Önce sabit giderleri ve taksitleri gözden geçir.",
+                            estimatedMonthlySaving: overspend, categoryID: nil)]
         }
         if rate < InsightThresholds.savingsRateTarget {
             let allowed = summary.income.scaled(numerator: 100 - Int(InsightThresholds.savingsRateTarget * 100),

@@ -67,8 +67,8 @@ struct DashboardView: View {
                     .foregroundStyle(summary.net.isNegative ? Color.expense : Color.primary)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
-                if let rate = summary.savingsRate {
-                    Text(rate < 0 ? "Gider geliri \(TR.percent(-rate)) aştı" : "Gelirinin \(TR.percent(rate))'i kaldı")
+                if let rate = summary.remainingRate {
+                    Text(remainingText(summary, rate: rate))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -76,18 +76,35 @@ struct DashboardView: View {
             HStack(alignment: .top) {
                 StatTile(title: "Gelir", value: summary.income, tint: .income)
                 StatTile(title: "Gider", value: summary.expense)
-                if summary.investment.isZero {
+                if summary.investment.isZero && summary.investmentReturn.isZero {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("İşlem").font(.caption).foregroundStyle(.secondary)
                         Text("\(summary.transactionCount)").font(.headline)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 } else {
-                    // Yatırım gider değildir; net ve tasarruf oranı bundan etkilenmez.
-                    StatTile(title: "Yatırım", value: summary.investment, tint: .investment)
+                    // Yatırım gider sayılmaz ama kalandan düşülür; bozma gelir sayılmaz, kalana eklenir.
+                    let invested = summary.netInvestment
+                    StatTile(title: invested.isNegative ? "Yatırımdan dönen" : "Yatırım", value: invested.magnitude,
+                             tint: .investment)
                 }
             }
         }
+    }
+
+    /// "Gelirinin %4'ü kaldı · yatırım dahil tasarruf %8"; eksideyse neyin aştığı.
+    private func remainingText(_ summary: PeriodSummary, rate: Double) -> String {
+        if rate >= 0 {
+            var text = "Gelirinin \(TR.percent(rate))'i kaldı"
+            if summary.netInvestment.minor > 0, let saving = summary.savingsRate {
+                text += " · yatırım dahil tasarruf \(TR.percent(saving))"
+            }
+            return text
+        }
+        if let saving = summary.savingsRate, saving < 0 {
+            return "Gider geliri \(TR.percent(-saving)) aştı"
+        }
+        return "Gider ve yatırım geliri \(TR.percent(-rate)) aştı"
     }
 
     @ViewBuilder

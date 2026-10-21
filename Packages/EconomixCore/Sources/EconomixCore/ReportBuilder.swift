@@ -15,16 +15,28 @@ public enum ReportMode: String, CaseIterable, Sendable {
 }
 
 public struct PeriodSummary: Hashable, Sendable {
+    /// Yatırım bozma hariç gelir.
     public let income: Money
     public let expense: Money
-    /// Yatırıma ayrılan; gider ve nete dahil değildir.
+    /// Yatırıma ayrılan (alım); gider sayılmaz.
     public let investment: Money
+    /// Yatırımdan dönen (bozma); gelir sayılmaz.
+    public let investmentReturn: Money
     public let transactionCount: Int
 
-    public var net: Money { income - expense }
+    /// Yatırıma giden net para (alım − bozma); negatifse yatırımdan çekilen.
+    public var netInvestment: Money { investment - investmentReturn }
 
-    /// (gelir − gider) / gelir. Gelir yoksa nil.
+    /// Kalan para: gelir − gider − net yatırım. Yatırım alımı düşürür, bozma artırır.
+    public var net: Money { income - expense - netInvestment }
+
+    /// (gelir − gider) / gelir: yatırım tasarruf sayılır. Gelir yoksa nil.
     public var savingsRate: Double? {
+        income.isZero ? nil : (income - expense).ratio(of: income)
+    }
+
+    /// Kalan / gelir. Gelir yoksa nil.
+    public var remainingRate: Double? {
         income.isZero ? nil : net.ratio(of: income)
     }
 }
@@ -36,13 +48,17 @@ public struct CategoryTotal: Hashable, Sendable {
     public let share: Double
 }
 
+/// Ay bazında toplamlar; alanların anlamı `PeriodSummary` ile aynıdır.
 public struct MonthlyTotals: Hashable, Sendable {
     public let month: YearMonth
     public let income: Money
     public let expense: Money
     public let investment: Money
+    public let investmentReturn: Money
 
-    public var net: Money { income - expense }
+    public var netInvestment: Money { investment - investmentReturn }
+    public var net: Money { income - expense - netInvestment }
+    public var savingsRate: Double? { income.isZero ? nil : (income - expense).ratio(of: income) }
 }
 
 /// Harcama grafiğinin bir çubuğu: dönem sınırına kırpılmış gün, hafta ya da bütçe ayı.
@@ -124,17 +140,19 @@ public enum ReportBuilder {
     }
 
     public static func summary(_ txs: [TxSnapshot], in period: DatePeriod) -> PeriodSummary {
-        var income = Money.zero, expense = Money.zero, investment = Money.zero, count = 0
+        var income = Money.zero, expense = Money.zero, investment = Money.zero, returns = Money.zero, count = 0
         for tx in txs where period.contains(tx.date) {
             switch tx.kind {
             case .income: income += tx.amount
+            case .divestment: returns += tx.amount
             case .expense: expense += tx.amount
             case .investment: investment += tx.amount
             case .transfer: continue
             }
             count += 1
         }
-        return PeriodSummary(income: income, expense: expense, investment: investment, transactionCount: count)
+        return PeriodSummary(income: income, expense: expense, investment: investment, investmentReturn: returns,
+                             transactionCount: count)
     }
 
     public static func categoryTotals(_ txs: [TxSnapshot], kind: TxKind, in period: DatePeriod) -> [CategoryTotal] {
@@ -153,10 +171,12 @@ public enum ReportBuilder {
     public static func monthlyTotals(_ txs: [TxSnapshot], months: [YearMonth],
                                      rule: MonthRule = .calendarMonths, in period: DatePeriod? = nil) -> [MonthlyTotals] {
         var income: [YearMonth: Money] = [:], expense: [YearMonth: Money] = [:], investment: [YearMonth: Money] = [:]
+        var returns: [YearMonth: Money] = [:]
         for tx in txs where period?.contains(tx.date) ?? true {
             let month = rule.month(containing: tx.date)
             switch tx.kind {
             case .income: income[month, default: .zero] += tx.amount
+            case .divestment: returns[month, default: .zero] += tx.amount
             case .expense: expense[month, default: .zero] += tx.amount
             case .investment: investment[month, default: .zero] += tx.amount
             case .transfer: continue
@@ -164,7 +184,7 @@ public enum ReportBuilder {
         }
         return months.map {
             MonthlyTotals(month: $0, income: income[$0] ?? .zero, expense: expense[$0] ?? .zero,
-                          investment: investment[$0] ?? .zero)
+                          investment: investment[$0] ?? .zero, investmentReturn: returns[$0] ?? .zero)
         }
     }
 

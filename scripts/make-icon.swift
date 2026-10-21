@@ -4,9 +4,10 @@ import AppKit
 let size = 1024.0
 let output = "Economix/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
+// App Store simgesi saydamlık kanalı içeremez: 32 bit, alfasız (RGBX) bitmap.
 let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size), pixelsHigh: Int(size), bitsPerSample: 8,
-                           samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-                           bytesPerRow: 0, bitsPerPixel: 0)!
+                           samplesPerPixel: 3, hasAlpha: false, isPlanar: false, colorSpaceName: .deviceRGB,
+                           bytesPerRow: 0, bitsPerPixel: 32)!
 NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
 let ctx = NSGraphicsContext.current!.cgContext
 

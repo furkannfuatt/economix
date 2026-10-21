@@ -48,6 +48,23 @@ struct CardLedgerTests {
         #expect(s.lastStatementTotal == tl(3_000))
     }
 
+    @Test("Karta dönen yatırım bozma tutarı iade gibi borcu azaltır")
+    func divestmentOnCard() {
+        let summary = CardLedger.summary(cardID: card, cycle: cycle,
+                                         transactions: [charge(1_000, d(2026, 10, 1)),
+                                                        charge(400, d(2026, 10, 3), kind: .divestment)],
+                                         asOf: d(2026, 10, 10))
+        #expect(summary.openPeriodSpending == tl(600))
+    }
+
+    @Test("Yatırım bozma türü yatırım kategorilerini kullanır")
+    func divestmentKind() {
+        #expect(TxKind.divestment.title == "Yatırım bozma")
+        #expect(TxKind.divestment.categoryKind == .investment)
+        #expect(TxKind.investment.categoryKind == .investment)
+        #expect(TxKind.income.categoryKind == .income)
+    }
+
     @Test("Fazla ödeme kalan borcu eksiye düşürmez")
     func overpayment() {
         let txs = [

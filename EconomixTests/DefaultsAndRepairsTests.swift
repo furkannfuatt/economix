@@ -22,7 +22,7 @@ struct NewDefaultsAndRepairsTests {
         #expect(SeedService.categories.contains { $0.key == "online" && $0.name == "Online Alışveriş" && $0.kind == .expense })
         #expect(SeedService.categories.contains { $0.key == "burs" && $0.name == "Burs" && $0.kind == .income })
         #expect(SeedService.categories.contains { $0.key == "yatirim-alim" && $0.name == "Yatırım" && $0.kind == .investment })
-        #expect(SeedService.categories.contains { $0.key == "yatirim" && $0.name == "Yatırım getirisi" && $0.kind == .income })
+        #expect(!SeedService.categories.contains { $0.key == "yatirim" }, "Yatırım bozma ayrı tür; gelir kategorisi yok")
         #expect(!SeedService.categories.contains { $0.key == "yatirim-gider" })
         #expect(Set(SeedService.categories.map(\.key)).count == SeedService.categories.count, "Anahtarlar tekil")
     }
@@ -101,7 +101,7 @@ struct NewDefaultsAndRepairsTests {
         #expect(old.seedKey == "yatirim-alim" && old.kind == .investment)
         #expect(entry.kind == .investment)
         #expect(item.kind == .investment)
-        #expect(returns.name == "Yatırım getirisi")
+        #expect(returns.isArchived, "Gelirdeki eski yatırım kategorisi yatırıma taşınıp arşivlenir")
         let investments = try f.context.fetch(FetchDescriptor<EntryCategory>()).filter { $0.kind == .investment }
         #expect(investments.count == 1, "Taşınan kategori varken yenisi eklenmez")
     }
@@ -112,6 +112,45 @@ struct NewDefaultsAndRepairsTests {
         f.context.insert(returns)
         try SeedService.migrateInvestmentCategory(in: f.context)
         #expect(returns.name == "Temettü")
+        #expect(returns.kind == .income && !returns.isArchived)
+    }
+
+    @Test("Gelirdeki 'Yatırım bozma' kayıtları yatırım bozma türüne ve Yatırım kategorisine taşınır")
+    func movesInvestmentReturns() throws {
+        let invest = EntryCategory(name: "Yatırım", icon: "chart", colorHex: "#000", kind: .investment,
+                                   seedKey: "yatirim-alim")
+        let returns = EntryCategory(name: "Yatırım bozma", icon: "chart", colorHex: "#000", kind: .income,
+                                    seedKey: "yatirim")
+        [invest, returns].forEach(f.context.insert)
+        let service = LedgerService(context: f.context)
+        let sale = try service.addEntry(amount: Money(minor: 100_000), kind: .income, date: .now, category: returns,
+                                        account: nil, merchant: "MIDAS")
+        let item = RecurringItem(title: "Fon satışı", amount: Money(minor: 50_000), kind: .income, frequency: .monthly,
+                                 dayOfMonth: 1, startDate: .now, isSubscription: false)
+        f.context.insert(item)
+        item.category = returns
+        try service.learnCategory(merchant: "MIDAS", category: returns)
+
+        try SeedService.migrateInvestmentCategory(in: f.context)
+
+        #expect(sale.kind == .divestment && sale.category === invest)
+        #expect(item.kind == .divestment && item.category === invest)
+        #expect(try f.context.fetch(FetchDescriptor<MerchantRule>()).allSatisfy { $0.category === invest })
+        #expect(returns.isArchived)
+        #expect(invest.kind == .investment && !invest.isArchived)
+    }
+
+    @Test("Yatırım kategorisi yoksa gelirdeki eski kategori yatırım kategorisine dönüşür")
+    func convertsReturnsCategory() throws {
+        let returns = EntryCategory(name: "Yatırım getirisi", icon: "chart", colorHex: "#000", kind: .income,
+                                    seedKey: "yatirim")
+        f.context.insert(returns)
+        let sale = try LedgerService(context: f.context).addEntry(amount: Money(minor: 100_000), kind: .income,
+                                                                  date: .now, category: returns, account: nil)
+        try SeedService.migrateInvestmentCategory(in: f.context)
+        #expect(returns.kind == .investment && returns.name == "Yatırım" && returns.seedKey == "yatirim-alim")
+        #expect(!returns.isArchived)
+        #expect(sale.kind == .divestment && sale.category === returns)
     }
 }
 

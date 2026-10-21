@@ -10,9 +10,11 @@ struct AIAnalysisSection: View {
     @Query(sort: \AIAnalysis.createdAt, order: .reverse) private var analyses: [AIAnalysis]
     @AppStorage("aiIncludeMerchants") private var includeMerchants = false
     @AppStorage(GeminiModel.storageKey) private var model = GeminiModel.flash.rawValue
+    @AppStorage(AIConsent.key) private var consentGiven = false
     @State private var running = false
     @State private var error: String?
     @State private var hasKey = GeminiKeyProvider.current != nil
+    @State private var askingConsent = false
 
     var body: some View {
         Group {
@@ -27,7 +29,7 @@ struct AIAnalysisSection: View {
                     .foregroundStyle(.secondary)
             } else {
                 Button {
-                    Task { await run() }
+                    if consentGiven { Task { await run() } } else { askingConsent = true }
                 } label: {
                     HStack {
                         Label(running ? "Analiz ediliyor…" : "Son 6 ayı analiz et", systemImage: "sparkles")
@@ -69,6 +71,7 @@ struct AIAnalysisSection: View {
             }
         }
         .onAppear { hasKey = GeminiKeyProvider.current != nil }
+        .aiConsentAlert(isPresented: $askingConsent) { Task { await run() } }
     }
 
     private func run() async {
@@ -197,6 +200,7 @@ struct AIHistoryView: View {
 struct AISettingsView: View {
     @AppStorage("aiIncludeMerchants") private var includeMerchants = false
     @AppStorage(GeminiModel.storageKey) private var model = GeminiModel.flash.rawValue
+    @AppStorage(AIConsent.key) private var consentGiven = false
     @State private var key = ""
     @State private var saved = GeminiKeyProvider.current != nil
 
@@ -237,11 +241,12 @@ struct AISettingsView: View {
             }
 
             Section {
+                Toggle("Google'a veri gönderme izni", isOn: $consentGiven)
                 Toggle("İşyeri adlarını gönder", isOn: $includeMerchants)
             } header: {
                 Text("Gizlilik")
             } footer: {
-                Text("Kapalıyken yalnızca aylık toplamlar, kategori toplamları, bütçeler, abonelik adları ve taksit yükü gönderilir. İşlem notları hiçbir zaman gönderilmez. Açarsan en çok harcama yaptığın 15 işyerinin adı ve toplamı da eklenir.")
+                Text("İzin kapalıyken Gemini'ye hiçbir şey gönderilmez; ilk kullanımda ne gönderileceği gösterilip sorulur. Analizde yalnızca aylık toplamlar, kategori toplamları, bütçeler, abonelik adları ve taksit yükü gider; işlem notları hiçbir zaman gönderilmez. İşyeri adlarını açarsan en çok harcama yaptığın 15 işyerinin adı ve toplamı ile bitmek üzere olan taksit planlarının adları da eklenir.")
             }
 
             Section {

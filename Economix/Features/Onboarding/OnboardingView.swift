@@ -51,10 +51,14 @@ struct OnboardingView: View {
             .buttonStyle(.glassProminent)
             .controlSize(.large)
 
-            Text("Yeniden kurulumda iCloud'daki verilerin birkaç saniye içinde gelir.")
+            Text("Yeniden kurulumda iCloud'daki verilerin birkaç saniye içinde gelir; beklemen yeterli.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+
+            // Başka bir kurulumdan (ör. geliştirme sürümünden) alınmış yedek dosyası.
+            BackupRestoreButton(title: "Yedekten geri yükle")
+                .font(.subheadline)
         }
         .padding(24)
     }

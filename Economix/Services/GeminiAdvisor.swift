@@ -202,7 +202,7 @@ struct GeminiAdvisor {
     Sen Türkiye'de yaşayan bir kullanıcının kişisel finans danışmanısın. Para birimi TL. \
     Sana kullanıcının son 6 ayının özetini JSON olarak veriyorum: aylık gelir/gider, kategori bazında aylık harcamalar \
     ve bütçeler, abonelikler, önümüzdeki aylardaki kredi kartı taksit yükü ve uygulamanın kural tabanlı bulguları. \
-    Aylar her ayın monthStartDay gününde başlar (1 ise takvim ayı; ör. 23 ise "2026-11" 23 Ekim–22 Kasım dönemidir). Son ay kısmidir; currentMonthDay dönemin kaçıncı gününde olduğumuzu gösterir. investment yatırıma ayrılan paradır; gider değildir ve tasarruf oranına dahil edilmez.
+    Aylar her ayın monthStartDay gününde başlar (1 ise takvim ayı; ör. 23 ise "2026-11" 23 Ekim–22 Kasım dönemidir). Son ay kısmidir; currentMonthDay dönemin kaçıncı gününde olduğumuzu gösterir. investment yatırıma giden net paradır (alım − bozma; negatifse yatırımdan çekilen). Gider değildir, tasarruf sayılır: savingsRatePercent (gelir − gider) / gelir'dir. Yatırım bozma gelir sayılmaz.
 
     Bu verilere dayanarak somut ve uygulanabilir tasarruf önerileri üret. Her öneri verideki bir rakama dayansın; \
     veride olmayan rakam uydurma. Tahmini aylık tasarrufu TL olarak gerçekçi ver. Kural tabanlı bulguları tekrar etme; \

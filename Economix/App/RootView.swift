@@ -121,6 +121,9 @@ enum AppMaintenance {
     /// Açılışta: iCloud kopyalarını birleştir, yeni varsayılanları ekle, eski hataların izlerini onar,
     /// kaçırılan düzenli işlemleri üret.
     static func runOnLaunch(context: ModelContext) async {
+        // Dışa aktarma/yedek ekranındayken kapanan uygulamanın geçici dosyaları kalmasın.
+        CSVExporter.removeTemporaryFiles()
+        BackupService.removeTemporaryFiles()
         try? SeedService.deduplicate(in: context)
         try? SeedService.migrateInvestmentCategory(in: context)
         try? SeedService.addNewDefaults(in: context)

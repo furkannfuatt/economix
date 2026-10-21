@@ -116,6 +116,33 @@ struct ImportServiceTests {
         #expect(refund.source == .imported)
     }
 
+    @Test("Hesaba gelen para yatırım kategorisiyle aktarılırsa yatırım bozma olur; elle girilen bozmayla eşleşir")
+    func divestmentFromStatement() throws {
+        let bank = Account(name: "Vadesiz", type: .bank)
+        f.context.insert(bank)
+        let invest = EntryCategory(name: "Yatırım", icon: "chart", colorHex: "#000", kind: .investment,
+                                   seedKey: "yatirim-alim")
+        f.context.insert(invest)
+        let rows = [["Tarih", "Açıklama", "Tutar"], ["01.10.2026", "MIDAS MENKUL", "1.000,00"]]
+        let result = try StatementParser.parse(rows: rows, profile: .generic, expenseSign: .negative)
+        let service = ImportService(context: f.context)
+
+        var candidates = try service.prepare(result, account: bank)
+        #expect(candidates[0].row.kind == .income)
+        candidates[0].category = invest
+        try service.commit(candidates, account: bank)
+        let entry = try #require(try f.context.fetch(FetchDescriptor<LedgerEntry>()).first)
+        #expect(entry.kind == .divestment)
+
+        let manual = Fixture()
+        let account = Account(name: "Vadesiz", type: .bank)
+        manual.context.insert(account)
+        try LedgerService(context: manual.context).addEntry(amount: tl(1_000), kind: .divestment, date: d(2026, 9, 30),
+                                                           category: nil, account: account, merchant: "Midas")
+        let match = try ImportService(context: manual.context).prepare(result, account: account)[0]
+        #expect(match.status == .possibleDuplicate)
+    }
+
     @Test("Ödül, bonus ve chip-para alacakları karta ödeme gibi varsayılan olarak dışarıda")
     func rewardsExcluded() throws {
         let card = f.makeCard()

@@ -222,9 +222,8 @@ struct ReportsView: View {
                          tint: summary.net.isNegative ? .expense : .primary,
                          caption: summary.savingsRate.map { "Tasarruf \(TR.percent($0))" })
             }
-            if !summary.investment.isZero {
-                Label("Yatırıma ayrılan \(summary.investment.formatted(decimals: false)) (gider ve nete dahil değil)",
-                      systemImage: "chart.line.uptrend.xyaxis")
+            if !summary.investment.isZero || !summary.investmentReturn.isZero {
+                Label(investmentText(summary), systemImage: "chart.line.uptrend.xyaxis")
                     .font(.caption)
                     .foregroundStyle(Color.investment)
             }
@@ -233,6 +232,17 @@ struct ReportsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    /// Yatırım gider sayılmaz ama kalandan düşülür; bozma gelir sayılmaz, kalana eklenir.
+    private func investmentText(_ summary: PeriodSummary) -> String {
+        let invested = summary.investment.formatted(decimals: false)
+        let returned = summary.investmentReturn.formatted(decimals: false)
+        switch (summary.investment.isZero, summary.investmentReturn.isZero) {
+        case (false, true): return "Yatırıma ayrılan \(invested) — gider sayılmaz, kalandan düşülür"
+        case (true, false): return "Yatırımdan dönen \(returned) — gelir sayılmaz, kalana eklenir"
+        default: return "Yatırıma ayrılan \(invested) · dönen \(returned) — kalana yansır, gider ve gelir sayılmaz"
         }
     }
 
@@ -302,9 +312,9 @@ struct ReportsView: View {
     }
 
     private func savingsRateChart(_ monthly: [MonthlyTotals]) -> some View {
+        // Yatırım tasarruf sayılır: (gelir − gider) / gelir.
         let points = monthly.compactMap { totals -> (YearMonth, Double)? in
-            guard totals.income.minor > 0 else { return nil }
-            return (totals.month, totals.net.ratio(of: totals.income) * 100)
+            totals.savingsRate.map { (totals.month, $0 * 100) }
         }
         return Chart {
             RuleMark(y: .value("Hedef", InsightThresholds.savingsRateTarget * 100))

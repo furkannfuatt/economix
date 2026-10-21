@@ -82,6 +82,11 @@ struct SettingsView: View {
                             .foregroundStyle(.orange)
                     }
                     NavigationLink {
+                        BackupView()
+                    } label: {
+                        Label("Yedekle ve geri yükle", systemImage: "externaldrive.badge.icloud")
+                    }
+                    NavigationLink {
                         ExportView()
                     } label: {
                         Label("İşlemleri dışa aktar (CSV)", systemImage: "square.and.arrow.up")
@@ -89,7 +94,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Güvenlik ve yedek")
                 } footer: {
-                    Text("Veriler iCloud'da otomatik yedeklenir. CSV, Excel'de açabileceğin ek bir kopyadır.")
+                    Text("Veriler iCloud'da otomatik yedeklenir. Yedek dosyası verilerini başka bir kuruluma taşımak için; CSV, Excel'de açabileceğin ek bir kopyadır.")
                 }
 
                 Section {
