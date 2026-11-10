@@ -11,6 +11,8 @@ struct DashboardView: View {
     @Query private var recurring: [RecurringItem]
     @Query(filter: #Predicate<Account> { !$0.isArchived }, sort: \Account.sortOrder) private var accounts: [Account]
 
+    @Query private var allAccounts: [Account]
+
     @AppStorage(MonthSettings.key) private var monthStartDay = 1
     /// 0: içinde bulunulan dönem, -1: bir önceki…
     @State private var monthOffset = 0
@@ -23,11 +25,19 @@ struct DashboardView: View {
         let period = rule.period(of: month)
         let summary = ReportBuilder.summary(data.transactions, in: period)
         let isCurrent = monthOffset == 0
+        let cashAccounts = accounts.filter { !$0.isCreditCard }
+        let position = CashLedger.position(
+            transactions: data.transactions,
+            openingBalance: cashAccounts.map(\.openingBalance).sum(),
+            cashAccountIDs: Set(cashAccounts.map { $0.id.uuidString }),
+            cardAccountIDs: Set(allAccounts.filter(\.isCreditCard).map { $0.id.uuidString }),
+            asOf: .now)
 
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
                     hero(summary: summary, isCurrent: isCurrent)
+                    totalCard(position: position)
                     budgetsCard(data: data)
                     breakdownCard(data: data, period: period)
                     if isCurrent {
@@ -87,6 +97,30 @@ struct DashboardView: View {
                     let invested = summary.netInvestment
                     StatTile(title: invested.isNegative ? "Yatırımdan dönen" : "Yatırım", value: invested.magnitude,
                              tint: .investment)
+                }
+            }
+        }
+    }
+
+    private func totalCard(position: CashPosition) -> some View {
+        let total = position.cash
+        return Card {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Net nakit para")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Text(total.formatted())
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .foregroundStyle(total.isNegative ? Color.expense : Color.primary)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                Text("Elindeki gerçek nakit. Kredi kartı harcamaları, ekstre ödemesi yapılınca düşer.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                if position.cardDebt.minor > 0 {
+                    Label("Ödenmemiş kart borcu \(position.cardDebt.formatted()) · ekstre ödenince nakitten düşecek",
+                          systemImage: "creditcard")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
             }
         }
